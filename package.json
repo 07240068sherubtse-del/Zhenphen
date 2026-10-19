@@ -1,0 +1,10 @@
+{
+  "name": "zhenphen-uiux-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix ./Zhenphen run dev",
+    "start": "npm --prefix ./Zhenphen start",
+    "check": "npm --prefix ./Zhenphen run check"
+  }
+}

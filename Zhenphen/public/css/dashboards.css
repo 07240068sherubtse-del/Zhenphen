@@ -1,0 +1,83 @@
+.admin-action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.admin-action-grid > .activity-row {
+  align-items: flex-start;
+  min-height: 118px;
+  padding: 19px;
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+
+.admin-action-grid > .activity-row h3 {
+  font-size: 0.95rem;
+}
+
+.admin-action-grid > .activity-row p {
+  margin-top: 6px;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.super-admin-panel {
+  margin-top: 22px;
+}
+
+.super-admin-search {
+  max-width: 420px;
+  margin-bottom: 18px;
+}
+
+.super-admin-panel table select {
+  min-width: 175px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--ink);
+  background: var(--cream);
+}
+
+.super-admin-content-form {
+  display: grid;
+  gap: 16px;
+  max-width: 780px;
+}
+
+.super-admin-notice {
+  padding: 16px;
+  border-radius: 6px;
+  background: var(--cream);
+  line-height: 1.6;
+}
+
+.super-admin-error {
+  margin-bottom: 16px;
+}
+
+.super-admin-panel [hidden] {
+  display: none;
+}
+
+@media (max-width: 850px) {
+  .admin-action-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.feedback-inbox { display: grid; gap: 16px; }
+.feedback-entry { padding: 22px; border: 1px solid #dce3d7; border-radius: 14px; background: #fffefa; }
+.feedback-sender { display: flex; align-items: flex-start; gap: 12px; }
+.feedback-initial { display: grid; place-items: center; width: 42px; height: 42px; flex-shrink: 0; border-radius: 50%; background: #e8eee2; color: #193d33; font-weight: 600; }
+.feedback-sender h3 { font-size: 1rem; letter-spacing: -.02em; margin-bottom: 3px; }
+.feedback-sender a { color: #315d49; font-size: .85rem; overflow-wrap: anywhere; }
+.feedback-sender small { display: block; color: #647069; font-size: .72rem; margin-top: 4px; }
+.feedback-sender time { margin-left: auto; color: #647069; font-size: .75rem; text-align: right; }
+.feedback-topic { display: inline-block; margin-top: 18px; padding: 4px 10px; background: #f1f2e8; border-radius: 6px; color: #526149; font-size: .75rem; }
+.feedback-message { white-space: pre-wrap; overflow-wrap: anywhere; margin: 14px 0; line-height: 1.8; color: #293f33; }
+.feedback-entry > small { color: #647069; font-size: .72rem; }
+.feedback-empty { padding: 24px; background: #f3f5ef; border-radius: 12px; }
+@media(max-width:600px) { .feedback-sender { flex-wrap: wrap; } .feedback-sender time { width: 100%; margin-left: 54px; text-align: left; } .feedback-entry { padding: 18px; } }

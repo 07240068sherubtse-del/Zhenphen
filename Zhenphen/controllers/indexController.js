@@ -1,3 +1,5 @@
+const path = require('path');
+
 exports.home = (req, res) => {
-  res.render('home', { title: 'Welcome to Zhenphen' });
+  res.sendFile(path.join(__dirname, '..', 'views', 'index.html'));
 };

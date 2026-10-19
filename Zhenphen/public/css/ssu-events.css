@@ -1,0 +1,88 @@
+.ssu-opportunities{padding-top:76px;padding-bottom:84px;background:var(--sage)}
+.ssu-opportunity-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.ssu-opportunity-card,.ssu-opportunity-empty,.ssu-admin-event{padding:24px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius)}
+.ssu-opportunity-card{display:flex;flex-direction:column;min-height:100%;padding:0;overflow:hidden;box-shadow:0 10px 30px #143e320b;transition:transform .2s ease,box-shadow .2s ease}
+.ssu-opportunity-card:hover{transform:translateY(-4px);box-shadow:0 18px 38px #143e3218}
+.ssu-event-banner{position:relative;display:flex;min-height:82px;align-items:center;justify-content:space-between;gap:12px;overflow:hidden;padding:18px 22px;background:linear-gradient(115deg,var(--forest),#285c47);color:var(--paper)}
+.ssu-event-banner:after{position:absolute;top:-48px;right:42px;width:150px;height:150px;border:1px solid #ffffff20;border-radius:50%;content:""}
+.ssu-event-partnership,.ssu-event-count{position:relative;z-index:1;display:inline-flex;align-items:center;gap:8px}
+.ssu-event-partnership{font-size:.77rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
+.ssu-event-partnership i{color:var(--gold);font-style:normal}
+.ssu-event-count{flex-shrink:0;padding:6px 9px;border:1px solid #ffffff35;border-radius:5px;background:#ffffff12;font-size:.72rem;font-weight:700}
+.ssu-event-count svg{color:var(--gold)}
+.ssu-opportunity-content{display:flex;flex:1;flex-direction:column;align-items:flex-start;padding:23px}
+.ssu-event-kicker{color:#78847c;font-size:.66rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.ssu-opportunity-heading,.ssu-admin-event-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%}
+.ssu-opportunity-heading .eyebrow{margin:0;font-size:.65rem;letter-spacing:.12em}
+.ssu-collaboration-label{display:inline-block;margin-bottom:7px;color:var(--forest);font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.ssu-opportunity-card h3,.ssu-admin-event h3{margin-top:8px;font-size:1.2rem;line-height:1.35}
+.ssu-opportunity-content>p,.ssu-admin-event>p{margin-top:11px;font-size:.85rem;line-height:1.7;overflow-wrap:anywhere}
+.ssu-event-meta{display:flex;flex-wrap:wrap;gap:7px 14px;margin-top:16px;color:var(--muted);font-size:.76rem}
+.ssu-event-meta strong{color:var(--forest)}
+.ssu-event-details{display:grid;width:100%;gap:12px;margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
+.ssu-event-details>span{display:flex;align-items:flex-start;gap:10px;color:var(--forest)}
+.ssu-event-details>span>svg{flex-shrink:0;margin-top:2px;color:#718277}
+.ssu-event-details>span>span{display:grid;gap:1px;min-width:0}
+.ssu-event-details strong{font-size:.78rem;line-height:1.5;overflow-wrap:anywhere}
+.ssu-event-details small{color:var(--muted);font-size:.68rem}
+.ssu-opportunity-card .ssu-event-action{width:100%;margin-top:20px;text-align:center}
+.ssu-opportunity-card .ssu-event-action.btn:not(.outline){border:1px solid var(--forest);background:var(--forest);color:var(--paper)}
+.ssu-opportunity-card .ssu-event-action.btn:not(.outline):hover:not(:disabled){background:var(--deep)}
+.ssu-opportunity-card .btn:disabled{cursor:default;opacity:.72}
+.ssu-opportunity-empty{grid-column:1/-1}
+.ssu-opportunity-empty h3{font-size:1.1rem}
+.ssu-opportunity-empty p{margin-top:8px}
+.ssu-event-create form{margin-top:20px}
+.ssu-event-create .form-foot{margin-top:20px}
+.ssu-admin-events{display:grid;gap:14px}
+.ssu-admin-event-heading h3{margin-top:10px}
+.ssu-event-admin-actions{display:flex;flex-wrap:wrap;gap:8px}
+.ssu-work-status{display:grid;gap:3px;color:var(--muted);font-size:.7rem;font-weight:600}
+.ssu-work-status select{min-height:38px;padding:6px 9px;border:1px solid var(--line);border-radius:5px;background:var(--paper);color:var(--ink);font-size:.78rem}
+.ssu-member-table td:first-child strong,.ssu-member-table td:first-child small{display:block}
+.ssu-member-table td:first-child small{margin-top:3px;color:var(--muted);font-size:.72rem;overflow-wrap:anywhere}
+.ssu-member-table td:last-child{min-width:180px}
+.ssu-attendee-details{margin-top:17px;padding-top:14px;border-top:1px solid var(--line)}
+.ssu-attendee-details summary{color:var(--forest);font-size:.83rem;font-weight:700;cursor:pointer}
+.ssu-attendee-details ul{display:grid;gap:7px;margin:12px 0 0;padding-left:18px}
+.ssu-attendee-details li{font-size:.82rem}
+.ssu-attendee-details li span{margin-left:7px;color:var(--muted);font-size:.75rem;overflow-wrap:anywhere}
+.home-ssu-section{position:relative;padding:34px 0 78px;overflow:hidden;background:var(--paper)}
+.home-ssu-panel{position:relative;isolation:isolate;grid-template-columns:auto minmax(0,1fr) auto;gap:28px;overflow:hidden;padding:clamp(28px,4vw,52px);border:1px solid #ffffff18;border-radius:16px;background:radial-gradient(ellipse at 100% 0%,#3d72552b,transparent 38%),linear-gradient(125deg,var(--deep),var(--forest) 72%,#234b39);box-shadow:0 24px 64px #102a2326}
+.home-ssu-panel:after{position:absolute;z-index:-1;right:22%;bottom:-140px;width:310px;height:310px;border:1px solid #ffffff12;border-radius:50%;box-shadow:0 0 0 34px #ffffff08,0 0 0 68px #ffffff05;content:""}
+.home-ssu-icon{width:64px;height:64px;border:1px solid #dfc17d55;background:#dfc17d18;color:var(--gold)}
+.home-ssu-icon svg{width:27px;height:27px}
+.home-ssu-copy>.eyebrow{color:var(--gold)}
+.home-ssu-copy>.eyebrow:before{background:var(--gold)}
+.home-ssu-copy h2{max-width:780px;color:var(--paper);font-size:clamp(1.65rem,3vw,2.45rem);letter-spacing:-.035em;line-height:1.16}
+.home-ssu-copy p{max-width:790px;margin-top:14px;color:#e1e9e3;font-size:.91rem;line-height:1.8}
+.home-ssu-copy>p>a{color:var(--gold);font-weight:700;text-decoration-thickness:1px;text-underline-offset:4px}
+.home-ssu-copy>p>a:hover{color:#f2dcaa}
+.home-ssu-copy>small{display:inline-flex;margin-top:12px;padding:7px 11px;border:1px solid #ffffff20;border-radius:999px;background:#ffffff0a;color:#e1e9e3;font-size:.72rem}
+.home-ssu-panel>.btn{position:relative;z-index:1;justify-self:end;min-width:205px;border:1px solid var(--gold);background:var(--gold);color:var(--deep);font-weight:750;box-shadow:0 8px 22px #0000001c;transition:transform .2s ease,background .2s ease}
+.home-ssu-panel>.btn:hover{transform:translateY(-2px);background:#f0d99e}
+@media(max-width:900px){.ssu-opportunity-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:900px){.home-ssu-panel{grid-template-columns:auto minmax(0,1fr);gap:22px}.home-ssu-panel>.btn{grid-column:2;justify-self:start}.home-ssu-panel:after{right:-90px}}
+@media(max-width:600px){.ssu-opportunities{padding:52px 0}.ssu-opportunity-grid{grid-template-columns:1fr}.ssu-opportunity-card{min-height:0}.ssu-event-banner{min-height:72px;padding:15px 18px}.ssu-event-partnership{font-size:.69rem}.ssu-opportunity-content{padding:20px}.ssu-admin-event{padding:18px}.ssu-admin-event-heading{align-items:flex-start;flex-direction:column}.ssu-event-admin-actions,.ssu-event-admin-actions .btn{width:100%}.ssu-event-meta{flex-direction:column;gap:4px}.ssu-work-status{width:100%}.home-ssu-section{padding:12px 0 54px}.home-ssu-panel{grid-template-columns:1fr;gap:18px;padding:25px 22px;border-radius:12px}.home-ssu-icon{width:54px;height:54px}.home-ssu-copy h2{font-size:1.65rem}.home-ssu-copy p{font-size:.86rem}.home-ssu-panel>.btn{grid-column:1;width:100%;justify-content:center}.home-ssu-panel:after{right:-180px;bottom:-190px}}
+.help-grid{gap:20px}
+.help-card{position:relative;border:1px solid #193d331c;border-radius:16px;box-shadow:0 10px 28px #102a2310;transition:transform .24s ease,border-color .24s ease,box-shadow .24s ease}
+.help-card:hover{transform:translateY(-5px);border-color:#193d3340;box-shadow:0 20px 42px #102a231a}
+.help-card:focus-within{border-color:#c7a85f;box-shadow:0 0 0 3px #c7a85f30,0 14px 32px #102a2314}
+.card-image{position:relative;height:clamp(175px,19vw,230px);background:var(--sage)}
+.card-image:after{position:absolute;inset:35% 0 0;background:linear-gradient(transparent,#102a2318);content:"";pointer-events:none}
+.card-image img{transition:transform .65s cubic-bezier(.2,.7,.2,1),filter .3s ease;filter:saturate(.92)}
+.help-card:hover .card-image img{filter:saturate(1.06)}
+.card-body{padding:24px}
+.card-body .card-top{gap:12px;margin-bottom:15px;color:var(--forest)}
+.card-body .card-top>svg{flex-shrink:0;width:38px;height:38px;padding:9px;border:1px solid #193d3318;border-radius:50%;background:#f1f4ee}
+.card-no{font-size:.66rem;font-weight:700;letter-spacing:.09em;text-align:right}
+.card-body h3{font-size:1.25rem;letter-spacing:-.025em}
+.card-body p{max-width:38ch;margin-top:10px;margin-bottom:20px;color:var(--muted);font-size:.88rem;line-height:1.65}
+.card-body>.btn.text{margin-top:auto;color:var(--forest);font-weight:700;text-decoration-thickness:1px;text-underline-offset:5px}
+.help-card.compact{border-color:#dbe3d7;background:linear-gradient(145deg,#eff2eb,#e5ebdf)}
+.help-card.compact .card-body{padding:30px}
+.help-card.compact .card-top>svg{background:#ffffffa8}
+@media(max-width:900px){.help-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:767px){.help-grid{gap:16px}.card-image{height:clamp(155px,28vw,200px)}.card-body{padding:21px}.help-card.compact .card-body{padding:24px}}
+@media(max-width:480px){.help-grid{grid-template-columns:1fr;gap:14px}.help-grid .help-card:last-child{grid-column:auto}.card-image{height:205px}.card-body{padding:23px}.help-card.compact .card-body{padding:25px}}
+@media(prefers-reduced-motion:reduce){.help-card,.card-image img{transition:none}}
