@@ -3,6 +3,7 @@ const { pool } = require('../db');
 const { requireAuth, requireRole, asyncRoute, httpError } = require('../middleware/api');
 
 const router = express.Router();
+router.param('userId', require('../middleware/api').validateId);
 const editableRoles = new Set(['student', 'supporter', 'admin', 'ssuAdmin']);
 
 router.use(requireAuth, requireRole('admin'));

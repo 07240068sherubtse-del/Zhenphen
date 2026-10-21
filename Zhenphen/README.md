@@ -1,63 +1,85 @@
-# Zhenphen Association — community platform
+# Zhenphen Association
 
-Responsive community platform using Express and PostgreSQL for member accounts, profiles, volunteer applications, SSU events, registrations, and attendance. The original logo is included byte-for-byte unchanged and is never cropped, recolored, filtered, or distorted.
+Express/PostgreSQL community platform. The existing page layouts, styles, and association logo are preserved. Backend-connected means the implementation exists; it does not mean the deployed database or email delivery has been verified.
 
-## Run locally
+## Feature status
 
-1. Install Node.js 20 or newer and PostgreSQL.
-2. Create a PostgreSQL database and copy `.env.example` to `.env`.
-3. Set `DATABASE_URL` and a unique `SESSION_SECRET` of at least 32 random characters.
-4. From the `Zhenphen` folder, run `npm ci` to install the app dependencies. Then run `npm run dev` either from the repository root or from the `Zhenphen` folder, and open `http://localhost:3000`.
+| Feature | Current implementation |
+| --- | --- |
+| Signup, verification, resend, login/logout | PostgreSQL accounts, bcrypt hashes, HTTP-only server sessions, SMTP verification links. New accounts must verify before login. Existing accounts predating verification retain access. |
+| Password recovery | SMTP link valid for 30 minutes, hashed tokens, single-use reset, all account sessions revoked after reset. |
+| Profile and photo | Authenticated database updates; email and role cannot be changed through profile updates. PNG/JPEG/WebP header checks, maximum 1 MB. |
+| Student applications | Authenticated student submissions and own activity history are stored. Administrative reporting includes counts. No application review/status assignment or placement workflow is implemented. |
+| SSU events | Database event publishing, public upcoming opportunities, student registrations, capacity checks, open/closed status, work status, attendance, and browser-generated attendance CSV. |
+| Super Admin | Account roles, homepage content, counts, and private contact feedback. SSU administrators cannot use these endpoints. Both administrator roles can manage SSU events through the backend. |
+| Contact | Public consent-based submission stored in PostgreSQL; Super Admin can read it. This does not send contact emails or provide a staff reply workflow. |
+| Online donations | Disabled with HTTP 503. No payment or donation record is created. Member donation history is empty. |
+| Financial transparency | Sample totals, charts, ledger entries, and CSV. No verified financial ledger, receipts, reconciliation, or live payment integration. |
+| Clothing/ration requests | Unavailable previews; submission buttons disabled, no staff request or collection workflow. Ration distribution tables are fictional browser-only samples. |
+| Organization information | Contact arrangements, service eligibility, partnership authorization, privacy/retention rules, and image rights need organizational review. |
 
-The repository-root `package.json` forwards `dev`, `start`, and `check` commands to the Express app in `Zhenphen/`. The root folder does not install the app dependencies; install them from `Zhenphen/`.
+## Repository layout and local setup
 
-The server applies the initial database schema at startup and serves the preserved page filenames from `views/`.
+The repository root contains forwarding npm commands and the canonical `render.yaml`. The Express application, dependency lockfile, schema, tests, public assets, and environment example are in `Zhenphen/`. The nested `Zhenphen/render.yaml` is an equivalent compatibility copy; use the root Blueprint for new deployments. Scaffold files such as `models/User.js`, `middleware/auth.js`, and `config/index.js` are not the active database/authentication implementation.
 
-## Accounts and roles
+1. Install Node.js 20+ (Render is pinned to Node 22) and PostgreSQL.
+2. From the repository root, run `npm --prefix Zhenphen ci`.
+3. Copy `Zhenphen/.env.example` to `Zhenphen/.env`. Use a dedicated local database and replace placeholders privately. Never put real credentials in documentation, Git, a ZIP, or chat.
+4. Set `DATABASE_URL`, a random `SESSION_SECRET` of at least 32 characters, and `APP_BASE_URL`. For local laptop-only use, the URL can be `http://localhost:3000`.
+5. Run `npm run dev` or `npm start` from the repository root or app directory. The app loads `.env` from its own directory. Database schema migration runs at startup. The configured port must be free; the app no longer silently switches ports and leaves email links pointing to the wrong server.
+6. Configure SMTP before testing signup or recovery. Missing/invalid email configuration produces an error; signup rolls back if sending fails. A successful SMTP call means the mail transport accepted the message, not proof of inbox delivery.
 
-Students must sign up with an email in the format `12345678.sherubtse@rub.edu.bt`, using their own 8-digit student number. Community supporters may register with any valid email address. Both use a password of at least 12 characters and later sign in with that same email. The server enforces the student email format, stores bcrypt password hashes, and uses HTTP-only, server-side PostgreSQL sessions. Accounts cannot choose administrative roles. Provision separate Super Admin and SSU administrator accounts with `SITE_ADMIN_EMAIL` / `SITE_ADMIN_PASSWORD` and `SSU_ADMIN_EMAIL` / `SSU_ADMIN_PASSWORD`; the Super Admin workspace manages account roles and homepage copy, while SSU event operations stay in their separate workspace. Never commit administrator secrets. Once bootstrap accounts exist, remove the bootstrap secrets from the deployment environment.
+For a phone on the same Wi-Fi, use the laptop's reachable LAN address in both the browser and local `APP_BASE_URL`, including the correct port. `localhost` on a phone refers to the phone. For links that work across networks, deploy to a public HTTPS domain. After changing the base URL, restart/redeploy and request a new email; old emails retain their original address.
 
-## Pages
+## Environment variables
 
-- Home, About, Community, Contact
-- Financial and Clothing Donation, Clothing Drive, Ration Support
-- Volunteer Registration
-- Login, Join the Community, Password Recovery, Logout
-- Member Overview, Financial Transparency, Ration Tracking
-- My Donations, Volunteer Activity, Profile
-- Separate student, supporter, Super Admin, and SSU administrator dashboards
-- Privacy / Terms and Image Credits
+All user-configured names are in `.env.example`; values there are harmless examples.
 
-## Live features
+| Variable | Purpose |
+| --- | --- |
+| `NODE_ENV` | `development` locally; `production` on Render. |
+| `PORT` | Local port, default 3000. Render supplies its service port. |
+| `DATABASE_URL` | Required private PostgreSQL connection string. |
+| `DATABASE_SSL` | Use `true` for production TLS with certificate verification; local PostgreSQL may use `false`. |
+| `PG_POOL_SIZE` | Optional pool size, default 10. |
+| `SESSION_SECRET` | Private stable random string, at least 32 characters in production. Rotating it signs users out. |
+| `APP_BASE_URL` | Website origin only, without a path/query/credentials. Production requires public HTTPS and rejects localhost/loopback. Set to the actual Render service URL or approved custom domain. |
+| `RENDER_EXTERNAL_URL` | Platform-provided fallback only when `APP_BASE_URL` is absent. Not a secret and not needed locally. Explicit incorrect `APP_BASE_URL` is rejected, not silently overridden. |
+| `EMAIL_SMTP_HOST`, `EMAIL_SMTP_PORT` | SMTP endpoint and port, normally 587 or 465. |
+| `EMAIL_SMTP_SECURE` | `true` for implicit TLS; port 465 also selects implicit TLS. Port 587 normally uses STARTTLS. |
+| `EMAIL_SMTP_USER`, `EMAIL_SMTP_PASSWORD` | Private provider-authorized SMTP credentials. Gmail may require a provider-issued app password. |
+| `EMAIL_FROM` | Plain sender mailbox authorized by the SMTP provider. Display name is Zhenphen. The recipient is the signup/recovery address, not this sender. |
+| `SITE_ADMIN_EMAIL`, `SITE_ADMIN_PASSWORD`, `SITE_ADMIN_NAME` | Optional initial Super Admin provisioning. Name has a default. Email/password must be supplied together. |
+| `SSU_ADMIN_EMAIL`, `SSU_ADMIN_PASSWORD`, `SSU_ADMIN_NAME` | Optional initial SSU administrator provisioning. Use a different mailbox from Super Admin. |
+| `NODE_VERSION` | Render build setting pinned to 22 in the Blueprint. |
 
-- Account registration, sign-in/out, role authorization, member profiles, and profile photo storage
-- Persistent SSU opportunities, student registrations, capacity enforcement, sign-up controls, attendance check-in/out, and volunteer applications
-- Server-recorded sign-in heartbeats and SSU reporting across devices, including per-member attended activity counts, per-work check-in totals, attendance CSV exports in both admin dashboards, and a unique-volunteers-served total. Attendance includes members recorded as checked in or checked out; registrations alone are not counted as attendance.
-- Public SSU opportunity listings and role-specific dashboards
-- SSU-published service activities are presented as joint collaborations with Zhenphen Association
-- Homepage volunteer total counts distinct people checked in or checked out of SSU activities; other impact figures remain illustrative
+Administrator provisioning is create-only. Restarting does not reset passwords, merge/delete users, or promote an existing mailbox. Once a role already has an administrator, bootstrap leaves it unchanged. Remove bootstrap email/password settings after initial provisioning and manage roles in the Super Admin workspace. New student accounts require exactly eight digits followed by `.sherubtse@rub.edu.bt`. Supporters may use other valid addresses. Passwords require 12-128 characters with at most 72 UTF-8 bytes because bcrypt has a 72-byte input limit.
 
-## Files and editing
+Verification links last 24 hours. Confirmation invalidates all verification links for that account. Recovery links last 30 minutes; successful reset invalidates all reset links and existing sessions. Failed resend delivery preserves earlier unexpired links. Links use random tokens with only SHA-256 hashes stored. Verification messages embed the existing association logo; Gmail's sender avatar is separately controlled by the provider/account.
 
-`public/styles.css` and `public/css/` contain shared and dashboard styles. `public/app.js` loads the feature modules in order. `public/js/live.js` connects the browser UI to the server API. `routes/api.js` implements account, profile, member, and public homepage-content endpoints; `routes/admin.js` serves Super Admin account-role and homepage-content management; `routes/ssu.js` and `controllers/ssuController.js` implement the role-restricted SSU opportunity and attendance workflows. `migrations/001_initial.sql` defines PostgreSQL records. Each HTML page in `views/` declares its route using `data-page`.
+## Render Blueprint deployment
 
-## Deploy on Render
+1. Create a Blueprint from this repository with Blueprint path **`render.yaml`** at repository root. Both Blueprint copies specify **`rootDir: Zhenphen`**, relative to the repository root. Do not add a second `Zhenphen` prefix to build/start commands.
+2. The service runs **`npm ci`** and **`npm start`** inside `Zhenphen/`, with health check `/health`. The Blueprint provisions a Singapore PostgreSQL service and web service. Review hosting costs before creating resources.
+3. Configure SMTP values and `APP_BASE_URL=https://YOUR-ACTUAL-SERVICE.onrender.com` privately in Render. Use the assigned address, not an assumed service name. Use the approved HTTPS custom domain when available. The database URL is provided by the Blueprint and the session secret is generated. Never deploy the local `.env`.
+4. Optionally provide separate initial administrator credentials. Deploy and confirm `/health` reports `database: connected`. Check logs without sharing credentials or tokens.
+5. Test signup, inbox delivery, verification on a phone, resend, login, recovery, profile, SSU publishing/registration/capacity/attendance, and role denial using dedicated staging accounts. See `VALIDATION.md`.
+6. Configure backups and restore testing, authorized contact channels, privacy/consent/retention, and staff operating procedures before inviting real members. No deployment was performed as part of this audit.
 
-1. Push this repository to a private GitHub repository controlled by the organization.
-2. In Render, create a Blueprint from that repository and set the repository root to this project folder if prompted. Review the plan and monthly price before confirming. `render.yaml` provisions a Singapore web service and persistent PostgreSQL database.
-3. Add unique `SSU_ADMIN_EMAIL` and `SSU_ADMIN_PASSWORD` values and separate `SITE_ADMIN_EMAIL` and `SITE_ADMIN_PASSWORD` values in Render's private environment settings. Use unique passwords of at least 12 characters. Do not put production secrets in Git.
-4. Deploy and verify `/health` reports `"database":"connected"`. Sign up with a student account, publish an SSU event, register from a second device/browser, and verify the admin counts and attendance.
-5. Configure a custom domain and HTTPS, backups, database retention, administrator access, and approved privacy/consent terms before inviting real members.
+The production base URL cannot be hardcoded here because the deployed service/custom domain has not been supplied. Startup now validates it, and Render's platform URL is a fallback when an explicit value is not set.
 
-## Payment and remaining launch requirements
+## Checks, tests, and release
 
-**Online donations are disabled.** A BNB account number by itself cannot initiate or verify a digital payment. No payment or donation record is created by the site. Enable giving only after BNB provisions an approved merchant gateway and supplies its integration documentation, test environment, merchant identifiers, signature/webhook requirements, and production credentials. Store credentials as private Render environment variables; do not post account or merchant details in this repository or chat.
+From either the repository root or app folder:
 
-Password recovery uses one-time links that expire after 30 minutes. Configure `EMAIL_SMTP_HOST`, `EMAIL_SMTP_PORT` (usually `587`), `EMAIL_SMTP_SECURE` (`true` only when using implicit TLS, usually port `465`), `EMAIL_SMTP_USER`, `EMAIL_SMTP_PASSWORD`, `EMAIL_FROM`, and `APP_BASE_URL` (`https://` in production) in the private environment settings before it can send mail. Never commit or share SMTP credentials. Other general-purpose contact, clothing, and ration forms are not connected to administrator workflows and are intentionally not presented as successful submissions. Before public launch, verify email delivery, privacy/consent/retention policies, and any needed review and moderation workflows. Homepage impact figures remain illustrative and must be replaced with authorized real data.
+- `npm run check`: parse all project JavaScript files without starting the app or reading secrets.
+- `npm test`: isolated HTTP route tests with fake database/mail dependencies; no `.env`, real database, or real SMTP transport. These are backend behavior tests, not PostgreSQL integration or browser tests.
+- `npm run release`: create `dist/zhenphen-release.zip` at repository root, excluding `.env`, hidden private folders, `.git`, `node_modules`, logs, and previous ZIPs. Only `.env.example` is included. Build a fresh archive after each change; do not manually ZIP the workspace.
 
-## Images
+See `VALIDATION.md` for actual audit results and the remaining manual checks. PostgreSQL migrations, transaction locking under real concurrency, provider email delivery, Render provisioning, and browser/mobile layout still require staging validation.
 
-The About page uses a photograph of Trashigang Dzong in eastern Bhutan by Christopher J. Fynn, licensed under CC BY-SA 3.0; attribution and license links appear on the Image Credits page. The school-meal photograph is credited to the World Food Programme and is illustrative, not a Zhenphen activity. Verify permission for all supplied project images and the original logo before public use.
+## Payments and organizational requirements
 
+BNB merchant gateway approval, integration documentation, credentials, signed callback/webhook verification, receipts, and reconciliation are required before enabling real giving. An account number alone is not a gateway. Do not collect bank/card details or claim a donation succeeded. Financial sample data must not be published as verified organizational results.
 
-New registrations require email verification before login. Registration sends a branded, single-use link valid for 24 hours; only the SHA-256 token hash is stored. Configure the same EMAIL_SMTP_* settings, EMAIL_FROM, and APP_BASE_URL described above. If SMTP is unavailable, registration fails without saving the account. Users can request another email at /join.html?resend=1. Existing accounts retain access. The verification column and token table are added automatically at startup by the idempotent schema migration.
+Confirm image rights before launch. The association logo is preserved. Trashigang Dzong imagery credits Christopher J. Fynn under CC BY-SA 3.0 via Image Credits; the WFP school-meal image is illustrative and is not a Zhenphen activity. Privacy and retention text still requires organizational approval.

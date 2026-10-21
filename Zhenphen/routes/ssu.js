@@ -3,6 +3,8 @@ const { requireAuth, requireRole, asyncRoute } = require('../middleware/api');
 const ssuController = require('../controllers/ssuController');
 
 const router = express.Router();
+router.param('eventId', require('../middleware/api').validateId);
+router.param('userId', require('../middleware/api').validateId);
 
 router.get('/events', asyncRoute(ssuController.listEvents));
 router.post('/events', requireAuth, requireRole('admin', 'ssuAdmin'), asyncRoute(ssuController.createEvent));

@@ -180,6 +180,7 @@ async function refreshSsuAdminData() {
   try {
     const response = await apiRequest('/api/ssu/admin/overview');
     window.liveSsuEvents = response.events;
+    window.liveSsuMembers = response.members;
     window.liveSsuMetrics = response.metrics;
     window.liveSsuMembers = response.members;
     const memberTable = document.querySelector('[data-ssu-member-table]');
@@ -277,7 +278,7 @@ async function bootLiveApp() {
   }
 
   render();
-  if (document.body.dataset.page === 'forgot' && new URLSearchParams(location.search).has('token')) {
+  if (['forgot', 'join'].includes(document.body.dataset.page) && new URLSearchParams(location.search).has('token')) {
     history.replaceState(null, '', location.pathname);
   }
   if (document.body.dataset.page === 'admin-dashboard' && user?.role === 'admin') {
@@ -381,13 +382,22 @@ async function bootLiveApp() {
     const notice = document.createElement('p');
     notice.className = 'form-note';
     notice.setAttribute('role', 'status');
-    notice.textContent = 'This is a preview. No payment will be taken.';
+    notice.textContent = 'Online donations are unavailable. This is a preview; no payment or donation record will be created.';
     financialForm.prepend(notice);
+  }
+  for (const previewForm of document.querySelectorAll('form[data-form="clothes"], form[data-form="ration"], form[data-form="rations"]')) {
+    const notice = document.createElement('p');
+    notice.className = 'form-note';
+    notice.setAttribute('role', 'status');
+    notice.textContent = 'Unavailable preview: requests are not sent to staff and no collection or handover is arranged.';
+    previewForm.prepend(notice);
+    const submit = previewForm.querySelector('button[type="submit"]');
+    if (submit) { submit.disabled = true; submit.textContent = 'Requests unavailable'; }
   }
   const eventFormNote = document.querySelector('.ssu-event-create .form-note');
   if (eventFormNote) eventFormNote.textContent = 'Published opportunities are stored in the shared SSU database.';
   const volunteerFormNote = document.querySelector('form[data-form="volunteer"] .form-note');
-  if (volunteerFormNote) volunteerFormNote.textContent = 'Sign in to save your application to the Zhenphen database. Applications require staff review.';
+  if (volunteerFormNote) volunteerFormNote.textContent = 'Students: sign in to save your application. Submission records your interest; placement and staff review are not automated.';
   const privacyHeading = [...document.querySelectorAll('h2')].find(heading => heading.textContent.includes('Local session data'));
   if (privacyHeading?.nextElementSibling) {
     privacyHeading.nextElementSibling.textContent = 'Account and activity records are stored in the Zhenphen database. Sign-in cookies are HTTP-only and expire after eight hours. Online payments are not enabled, and no bank or card details are collected.';
@@ -463,7 +473,7 @@ async function refreshHomepageData() {
 
 async function submitLiveForm(form, event) {
   const type = form.dataset.form;
-  if (!['login', 'join', 'profile', 'ssu-event', 'volunteer', 'money', 'clothes', 'ration', 'contact', 'reset', 'reset-confirm', 'verify-email', 'resend-verification'].includes(type)) return;
+  if (!['login', 'join', 'profile', 'ssu-event', 'volunteer', 'money', 'clothes', 'ration', 'rations', 'contact', 'reset', 'reset-confirm', 'verify-email', 'resend-verification'].includes(type)) return;
   event.preventDefault();
   event.stopImmediatePropagation();
   const values = Object.fromEntries(new FormData(form));
@@ -548,7 +558,7 @@ async function submitLiveForm(form, event) {
     }
 
     if (type === 'volunteer') {
-      if (!store.get('signed', false)) throw new Error('Sign in to submit a volunteer application. Your application was not saved.');
+      if (!store.get('signed', false) || memberRole() !== 'student') throw new Error('Sign in with a student account to submit a volunteer application. Your application was not saved.');
       const result = await apiRequest('/api/volunteer-applications', {
         method: 'POST',
         body: JSON.stringify({
@@ -611,7 +621,16 @@ async function submitLiveForm(form, event) {
 document.addEventListener('submit', event => {
   const form = event.target;
   if (!(form instanceof HTMLFormElement)) return;
-  void submitLiveForm(form, event);
+  if (form.dataset.form?.startsWith('super-admin-')) return;
+  if (form.dataset.submitting === 'true') { event.preventDefault(); event.stopImmediatePropagation(); return; }
+  form.dataset.submitting = 'true';
+  const submit = form.querySelector('button[type="submit"]');
+  const wasDisabled = submit?.disabled;
+  void submitLiveForm(form, event).finally(() => {
+    delete form.dataset.submitting;
+    if (submit?.isConnected) submit.disabled = Boolean(wasDisabled);
+  });
+  if (submit?.isConnected) submit.disabled = true;
 }, true);
 
 document.addEventListener('click', async event => {
@@ -628,4 +647,11 @@ document.addEventListener('click', async event => {
   }
 }, true);
 
-void bootLiveApp();
+void bootLiveApp().catch(requestError => {
+  console.error('Unable to initialize live features:', requestError);
+  const notice = document.createElement('p');
+  notice.setAttribute('role', 'alert');
+  notice.className = 'form-error';
+  notice.textContent = 'Live data could not be loaded. Refresh the page and try again. Some features may be unavailable.';
+  document.getElementById('app')?.prepend(notice);
+});

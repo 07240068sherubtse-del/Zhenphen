@@ -14,7 +14,7 @@ exports.listEvents = async (req, res) => {
             EXISTS(SELECT 1 FROM ssu_registrations mine
                    WHERE mine.event_id = e.id AND mine.user_id = $1::bigint) AS registered
      FROM ssu_events e LEFT JOIN ssu_registrations r ON r.event_id = e.id
-     ${admin ? '' : "WHERE e.status = 'Open' AND e.event_date >= CURRENT_DATE"}
+     ${admin ? '' : "WHERE e.status = 'Open' AND e.event_date >= (NOW() AT TIME ZONE 'Asia/Thimphu')::date AND e.work_status = 'Upcoming'"}
      GROUP BY e.id ORDER BY e.event_date ASC`,
     [req.user?.id || null]
   );
@@ -49,14 +49,16 @@ exports.registerForEvent = async (req, res) => {
   try {
     await client.query('BEGIN');
     const eventResult = await client.query(
-      'SELECT id, status, event_date::text AS event_date, capacity FROM ssu_events WHERE id = $1 FOR UPDATE',
+      'SELECT id, status, event_date::text AS event_date, capacity, work_status FROM ssu_events WHERE id = $1 FOR UPDATE',
       [req.params.eventId]
     );
     const event = eventResult.rows[0];
     const todayInBhutan = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Thimphu' }).format(new Date());
-    if (!event || event.status !== 'Open' || event.event_date < todayInBhutan) {
+    if (!event || event.status !== 'Open' || event.work_status !== 'Upcoming' || event.event_date < todayInBhutan) {
       throw httpError(409, 'This opportunity is no longer open for registration.');
     }
+    const existing = await client.query('SELECT id FROM ssu_registrations WHERE event_id = $1 AND user_id = $2', [event.id, req.user.id]);
+    if (existing.rowCount) throw httpError(409, 'You are already registered for this opportunity.');
     const countResult = await client.query(
       'SELECT COUNT(*)::integer AS count FROM ssu_registrations WHERE event_id = $1',
       [event.id]
@@ -112,12 +114,14 @@ exports.updateAttendance = async (req, res) => {
   const result = await pool.query(
     `UPDATE ssu_registrations SET attendance = $1
      WHERE event_id = $2 AND user_id = $3
+       AND (attendance = $1 OR ($1 = 'Checked in' AND attendance = 'Registered')
+            OR ($1 = 'Checked out' AND attendance = 'Checked in'))
        AND EXISTS (SELECT 1 FROM ssu_events WHERE id = $2 AND work_status = 'In progress')
      RETURNING attendance`,
     [attendance, req.params.eventId, req.params.userId]
   );
   if (!result.rowCount) {
-    throw httpError(409, 'The member registration was not found, or the work is not in progress.');
+    throw httpError(409, 'Attendance cannot be updated. Check that the member is registered, the work is in progress, and check-in happens before check-out.');
   }
   res.json({ attendance: result.rows[0].attendance });
 };
@@ -154,7 +158,7 @@ exports.getAdminOverview = async (req, res) => {
                WHERE r.attendance = 'Checked in' AND e.work_status = 'In progress') AS "activeVolunteers",
               (SELECT COUNT(DISTINCT user_id)::integer FROM ssu_registrations
                WHERE attendance IN ('Checked in', 'Checked out')) AS "volunteersServed",
-              (SELECT COUNT(*)::integer FROM ssu_events WHERE status = 'Open' AND event_date >= CURRENT_DATE) AS "openEvents"`
+              (SELECT COUNT(*)::integer FROM ssu_events WHERE status = 'Open' AND event_date >= (NOW() AT TIME ZONE 'Asia/Thimphu')::date AND work_status = 'Upcoming') AS "openEvents"`
     )
   ]);
   res.json({ events: events.rows, members: members.rows, metrics: counts.rows[0] });

@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "npm --prefix ./Zhenphen run dev",
     "start": "npm --prefix ./Zhenphen start",
-    "check": "npm --prefix ./Zhenphen run check"
+    "check": "npm --prefix ./Zhenphen run check",
+    "test": "npm --prefix ./Zhenphen test",
+    "release": "npm --prefix ./Zhenphen run release"
   }
 }

@@ -4,12 +4,13 @@ const session = require('express-session');
 const connectPgSimple = require('connect-pg-simple');
 const helmet = require('helmet');
 const crypto = require('crypto');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const { pool, initializeDatabase } = require('./db');
 const apiRoutes = require('./routes/api');
 const adminRoutes = require('./routes/admin');
 const ssuRoutes = require('./routes/ssu');
 const { apiError } = require('./middleware/api');
+const { bootstrapAdministrator } = require('./bootstrap');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -19,7 +20,7 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.set('trust proxy', 1);
 
-app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false, referrerPolicy: { policy: 'no-referrer' } }));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: false, limit: '32kb' }));
 app.use(session({
@@ -88,6 +89,7 @@ async function start() {
   if (process.env.NODE_ENV === 'production' && (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32)) {
     throw new Error('SESSION_SECRET must be configured with at least 32 characters in production.');
   }
+  if (process.env.NODE_ENV === 'production') require('./config/runtime').appBaseUrl();
   await initializeDatabase();
   const administratorEmails = [
     process.env.SSU_ADMIN_EMAIL,
@@ -102,23 +104,9 @@ async function start() {
   if (!Number.isInteger(requestedPort) || requestedPort < 0 || requestedPort > 65535) {
     throw new Error('PORT must be a valid TCP port between 0 and 65535.');
   }
-  const allowPortFallback = process.env.NODE_ENV !== 'production' && requestedPort > 0;
-  const lastFallbackPort = Math.min(requestedPort + 20, 65535);
-  for (let port = requestedPort; ; port += 1) {
-    try {
-      const server = await listenOnPort(port);
-      const actualPort = server.address().port;
-      if (requestedPort > 0 && actualPort !== requestedPort) {
-        console.warn(`Port ${requestedPort} is already in use; using port ${actualPort} instead.`);
-      }
-      console.log(`Zhenphen server running at http://localhost:${actualPort}`);
-      return;
-    } catch (error) {
-      if (error.code !== 'EADDRINUSE' || !allowPortFallback || port >= lastFallbackPort) {
-        throw error;
-      }
-    }
-  }
+  const server = await listenOnPort(requestedPort);
+  console.log(`Zhenphen server listening on port ${server.address().port}`);
+
 }
 
 function listenOnPort(port) {
@@ -137,74 +125,6 @@ function listenOnPort(port) {
   });
 }
 
-async function bootstrapAdministrator(emailKey, passwordKey, nameKey, role, memberType) {
-  const email = process.env[emailKey]?.trim().toLowerCase();
-  const password = process.env[passwordKey];
-  if (!email && !password) return;
-  if (!email || !password || password.length < 12 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new Error(`${emailKey} and ${passwordKey} must be configured with a valid email and a password of at least 12 characters.`);
-  }
-  const bcrypt = require('bcryptjs');
-  const passwordHash = await bcrypt.hash(password, 12);
-  const name = process.env[nameKey]?.trim().slice(0, 120)
-    || (role === 'ssuAdmin' ? 'SSU Coordinator' : 'Zhenphen Administrator');
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const existingAdmins = await client.query(
-      'SELECT id FROM users WHERE role = $1 ORDER BY created_at DESC, id DESC FOR UPDATE',
-      [role]
-    );
-    if (existingAdmins.rowCount > 1 && role !== 'ssuAdmin') {
-      throw new Error(`Multiple ${role} accounts exist; resolve them before bootstrapping the configured administrator.`);
-    }
-    if (existingAdmins.rowCount > 0) {
-      const [latestAdmin, ...olderAdmins] = existingAdmins.rows;
-      for (const olderAdmin of olderAdmins) {
-        await client.query(
-          'UPDATE ssu_events SET created_by = $1 WHERE created_by = $2',
-          [latestAdmin.id, olderAdmin.id]
-        );
-        await client.query(
-          `UPDATE ssu_registrations old_registration
-           SET user_id = $1
-           WHERE old_registration.user_id = $2
-             AND NOT EXISTS (
-               SELECT 1 FROM ssu_registrations latest_registration
-               WHERE latest_registration.event_id = old_registration.event_id
-                 AND latest_registration.user_id = $1
-             )`,
-          [latestAdmin.id, olderAdmin.id]
-        );
-        await client.query('DELETE FROM ssu_registrations WHERE user_id = $1', [olderAdmin.id]);
-        await client.query('UPDATE volunteer_applications SET user_id = $1 WHERE user_id = $2', [latestAdmin.id, olderAdmin.id]);
-        await client.query('UPDATE user_presence SET user_id = $1 WHERE user_id = $2', [latestAdmin.id, olderAdmin.id]);
-        await client.query('DELETE FROM users WHERE id = $1', [olderAdmin.id]);
-      }
-      await client.query(
-        `UPDATE users
-         SET name = $1, email = $2, password_hash = $3, member_type = $4
-         WHERE id = $5`,
-        [name, email, passwordHash, memberType, latestAdmin.id]
-      );
-      await client.query('COMMIT');
-      return;
-    }
-    await client.query(
-      `INSERT INTO users (name, email, password_hash, role, member_type)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (email) DO UPDATE
-       SET role = EXCLUDED.role, password_hash = EXCLUDED.password_hash`,
-      [name, email, passwordHash, role, memberType]
-    );
-    await client.query('COMMIT');
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
-}
 
 start().catch(error => {
   console.error('Unable to start Zhenphen:', error);

@@ -52,22 +52,6 @@ function ssuLiveVolunteerCount() {
     .map(registration => registration.memberEmail)).size;
 }
 
-function refreshSsuAdminData() {
-  if (document.body.dataset.page !== 'ssu-admin-dashboard') return;
-  const events = sharedSsuEvents();
-  const registrations = sharedSsuRegistrations();
-  const users = sharedStore.get('members', []);
-  const donations = sharedStore.get('donations', []);
-  const activities = sharedStore.get('volunteerActivities', []);
-  const memberTable = document.querySelector('[data-ssu-member-table]');
-  const eventList = document.querySelector('[data-ssu-event-list]');
-  if (memberTable) memberTable.innerHTML = ssuMemberTable(buildContributionMembers(users, donations, registrations, activities, events));
-  if (eventList) eventList.innerHTML = ssuAdminEventList(events, registrations);
-  document.querySelector('[data-live-active-user-count]')?.replaceChildren(String(activeUserCount()));
-  document.querySelector('[data-live-volunteer-count]')?.replaceChildren(String(ssuLiveVolunteerCount()));
-  bindSsuEvents();
-}
-
 function buildContributionMembers(users, donations, registrations, activities, events) {
   const byEmail = new Map();
   const addMember = (email, name) => {

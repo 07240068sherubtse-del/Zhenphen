@@ -1,16 +1,17 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const path = require('path');
 const nodemailer = require('nodemailer');
 const { rateLimit } = require('express-rate-limit');
 const { pool } = require('../db');
-const { requireAuth, asyncRoute, httpError } = require('../middleware/api');
+const { requireAuth, requireRole, asyncRoute, httpError } = require('../middleware/api');
 
 const router = express.Router();
-const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
-const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false });
-const applicationLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
-const passwordResetLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false });
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests. Please wait and try again later.' } });
+const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests. Please wait and try again later.' } });
+const applicationLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests. Please wait and try again later.' } });
+const passwordResetLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests. Please wait and try again later.' } });
 const memberQuery = 'SELECT id, name, email, role, member_type AS "memberType", phone, bio, skills, created_at AS "createdAt" FROM users';
 const passwordResetAccepted = 'If an account exists for that address, password reset instructions will be sent.';
 
@@ -36,11 +37,11 @@ function validateEmail(email) {
 }
 
 function passwordResetMailConfig() {
-  const { EMAIL_SMTP_HOST, EMAIL_SMTP_PORT, EMAIL_SMTP_USER, EMAIL_SMTP_PASSWORD, EMAIL_FROM, APP_BASE_URL } = process.env;
+  const { EMAIL_SMTP_HOST, EMAIL_SMTP_PORT, EMAIL_SMTP_USER, EMAIL_SMTP_PASSWORD, EMAIL_FROM } = process.env;
   const port = Number(EMAIL_SMTP_PORT || 587);
   let baseUrl;
   try {
-    baseUrl = new URL(APP_BASE_URL);
+    baseUrl = new URL(require('../config/runtime').appBaseUrl());
   } catch {
     throw httpError(503, 'Account email is not configured. Ask the site administrator to configure SMTP and APP_BASE_URL.');
   }
@@ -57,11 +58,12 @@ function passwordResetMailConfig() {
       port,
       secure: process.env.EMAIL_SMTP_SECURE === 'true' || port === 465,
       auth: { user: EMAIL_SMTP_USER, pass: EMAIL_SMTP_PASSWORD },
+      requireTLS: process.env.NODE_ENV === 'production',
       connectionTimeout: 10000,
       greetingTimeout: 10000,
       socketTimeout: 15000
     }),
-    from: EMAIL_FROM,
+    from: { name: 'Zhenphen', address: EMAIL_FROM },
     baseUrl: baseUrl.origin
   };
 }
@@ -93,7 +95,7 @@ router.get('/auth/session', asyncRoute(async (req, res) => {
   res.json({ user: publicUser(user) });
 }));
 
-const feedbackLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false });
+const feedbackLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests. Please wait and try again later.' } });
 router.post('/feedback', feedbackLimiter, asyncRoute(async (req, res) => {
   const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
   const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
@@ -110,11 +112,11 @@ router.post('/feedback', feedbackLimiter, asyncRoute(async (req, res) => {
 
 router.post('/auth/register', registerLimiter, asyncRoute(async (req, res) => {
   const name = clean(req.body.name, 120);
-  const email = clean(req.body.email, 254).toLowerCase();
+  const email = clean(req.body.email, 255).toLowerCase();
   const password = typeof req.body.password === 'string' ? req.body.password : '';
   const memberType = clean(req.body.memberType, 80);
-  if (name.length < 2 || !validateEmail(email) || password.length < 12 || password.length > 128) {
-    throw httpError(400, 'Enter your name, a valid email, and a password with at least 12 characters.');
+  if (name.length < 2 || !validateEmail(email) || password.length < 12 || password.length > 128 || Buffer.byteLength(password, 'utf8') > 72) {
+    throw httpError(400, 'Enter your name, a valid email, and a password with 12-128 characters (at most 72 UTF-8 bytes).');
   }
   if (!['Sherubtse College student', 'Community supporter / donor'].includes(memberType)) {
     throw httpError(400, 'Choose a valid member type.');
@@ -148,7 +150,7 @@ router.post('/auth/register', registerLimiter, asyncRoute(async (req, res) => {
     }
     await sendVerification(client, result.rows[0], mailConfig);
     await client.query('COMMIT');
-    return res.status(201).json({ message: 'We sent a verification link to your email. Open it within 24 hours to activate your account.' });
+    return res.status(201).json({ message: `We sent a verification link to ${email}. Open it within 24 hours to activate your account.` });
   } catch (error) {
     await client.query('ROLLBACK');
     if (error.code === '23505') throw httpError(409, 'An account with this email already exists.');
@@ -169,9 +171,16 @@ async function sendVerification(client, account, { mailer, from, baseUrl }) {
     VALUES ($1, $2, NOW() + INTERVAL '24 hours')`, [hash, account.id]);
   try {
     await mailer.sendMail({
-      from, to: account.email, subject: 'Welcome to Zhenphen ? verify your email',
+      from, to: account.email, subject: 'Welcome to Zhenphen - verify your email',
+      attachments: [{
+        filename: 'zhenphen-logo.png',
+        path: path.join(__dirname, '../public/assets/Zhenphen Association logo.png'),
+        cid: 'zhenphen-logo',
+        contentType: 'image/png',
+        contentDisposition: 'inline'
+      }],
       text: `Hello ${account.name},\n\nWelcome to the community! Verify your email within 24 hours:\n${link}\n\nIf you did not create an account, ignore this message.`,
-      html: `<div style="background:#f1f5ef;padding:32px;font-family:Arial,sans-serif;color:#193d33"><div style="max-width:480px;margin:auto;background:#fffefa;padding:36px;border-radius:20px"><p style="letter-spacing:3px;font-size:12px">ZHENPHEN ? COMMUNITY FIRST</p><h1>A little kindness.<br>A new beginning.</h1><p>Hello ${escapeHtml(account.name)},</p><p>Welcome to the community. Confirm your email to activate your account and take your first step with us.</p><p style="margin:32px 0"><a href="${escapeHtml(link.toString())}" style="background:#193d33;color:white;padding:16px 24px;border-radius:10px;text-decoration:none;display:inline-block">Verify my email</a></p><p>This link expires in 24 hours and works once.</p><p style="font-size:12px;color:#68756c">If the button does not work, copy this link into your browser:<br>${escapeHtml(link.toString())}</p><p style="font-size:12px;color:#68756c">If you did not create this account, you can ignore this email.</p></div></div>`
+      html: `<div style="background:#f1f5ef;padding:32px;font-family:Arial,sans-serif;color:#193d33"><div style="max-width:480px;margin:auto;background:#fffefa;padding:36px;border-radius:20px"><img src="cid:zhenphen-logo" alt="Zhenphen Association" width="120" style="display:block;width:120px;max-width:100%;height:auto;margin:0 0 24px"><p style="letter-spacing:3px;font-size:12px">ZHENPHEN &middot; COMMUNITY FIRST</p><h1>A little kindness.<br>A new beginning.</h1><p>Hello ${escapeHtml(account.name)},</p><p>Welcome to the community. Confirm your email to activate your account and take your first step with us.</p><p style="margin:32px 0"><a href="${escapeHtml(link.toString())}" style="background:#193d33;color:white;padding:16px 24px;border-radius:10px;text-decoration:none;display:inline-block">Verify my email</a></p><p>This link expires in 24 hours and works once.</p><p style="font-size:12px;color:#68756c">If the button does not work, copy this link into your browser:<br>${escapeHtml(link.toString())}</p><p style="font-size:12px;color:#68756c">If you did not create this account, you can ignore this email.</p></div></div>`
     });
   } catch (error) {
     await client.query('DELETE FROM email_verification_tokens WHERE token_hash = $1', [hash]);
@@ -181,7 +190,7 @@ async function sendVerification(client, account, { mailer, from, baseUrl }) {
 }
 
 router.post('/auth/verification/resend', passwordResetLimiter, asyncRoute(async (req, res) => {
-  const email = clean(req.body.email, 254).toLowerCase();
+  const email = clean(req.body.email, 255).toLowerCase();
   if (!validateEmail(email)) throw httpError(400, 'Enter a valid email address.');
   const config = passwordResetMailConfig();
   const result = await pool.query('SELECT id, name, email FROM users WHERE email = $1 AND email_verified = FALSE', [email]);
@@ -193,17 +202,30 @@ router.post('/auth/verification/confirm', passwordResetLimiter, asyncRoute(async
   const token = typeof req.body.token === 'string' ? req.body.token : '';
   if (!/^[a-f0-9]{64}$/.test(token)) throw httpError(400, 'This verification link is invalid. Request a new email.');
   const hash = crypto.createHash('sha256').update(token).digest('hex');
-  const result = await pool.query(`WITH consumed AS (
-    DELETE FROM email_verification_tokens WHERE token_hash = $1 AND expires_at > NOW() RETURNING user_id
-  ) UPDATE users SET email_verified = TRUE, updated_at = NOW() WHERE id IN (SELECT user_id FROM consumed) RETURNING id`, [hash]);
-  if (!result.rowCount) throw httpError(400, 'This verification link has expired or was already used. Try signing in or request a new email.');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const account = await client.query(`SELECT u.id FROM users u
+      JOIN email_verification_tokens t ON t.user_id = u.id
+      WHERE t.token_hash = $1 AND t.expires_at > NOW() AND u.email_verified = FALSE
+      FOR UPDATE OF u`, [hash]);
+    if (!account.rowCount) throw httpError(400, 'This verification link has expired or was already used. Request a new email.');
+    await client.query('UPDATE users SET email_verified = TRUE, updated_at = NOW() WHERE id = $1', [account.rows[0].id]);
+    await client.query('DELETE FROM email_verification_tokens WHERE user_id = $1', [account.rows[0].id]);
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
   res.json({ message: 'Your email is verified. You can now sign in and join the community.' });
 }));
 
 router.post('/auth/login', loginLimiter, asyncRoute(async (req, res) => {
-  const email = clean(req.body.email, 254).toLowerCase();
+  const email = clean(req.body.email, 255).toLowerCase();
   const password = typeof req.body.password === 'string' ? req.body.password : '';
-  if (!validateEmail(email) || !password || password.length > 128) {
+  if (!validateEmail(email) || !password || password.length > 128 || Buffer.byteLength(password, 'utf8') > 72) {
     throw httpError(400, 'Enter a valid email and password.');
   }
   const result = await pool.query(
@@ -221,7 +243,7 @@ router.post('/auth/login', loginLimiter, asyncRoute(async (req, res) => {
 }));
 
 router.post('/auth/password-reset/request', passwordResetLimiter, asyncRoute(async (req, res) => {
-  const email = clean(req.body.email, 254).toLowerCase();
+  const email = clean(req.body.email, 255).toLowerCase();
   if (!validateEmail(email)) throw httpError(400, 'Enter a valid email address.');
   const { mailer, from, baseUrl } = passwordResetMailConfig();
   const result = await pool.query('SELECT id, name, email FROM users WHERE email = $1', [email]);
@@ -232,7 +254,7 @@ router.post('/auth/password-reset/request', passwordResetLimiter, asyncRoute(asy
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
   const resetUrl = new URL('/forgot-password.html', `${baseUrl}/`);
   resetUrl.searchParams.set('token', token);
-  await pool.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [account.id]);
+  await pool.query('DELETE FROM password_reset_tokens WHERE expires_at < NOW()');
   await pool.query(
     `INSERT INTO password_reset_tokens (token_hash, user_id, expires_at)
      VALUES ($1, $2, NOW() + INTERVAL '30 minutes')`,
@@ -260,8 +282,8 @@ router.post('/auth/password-reset/confirm', passwordResetLimiter, asyncRoute(asy
   const token = typeof req.body.token === 'string' ? req.body.token : '';
   const password = typeof req.body.password === 'string' ? req.body.password : '';
   if (!/^[a-f0-9]{64}$/.test(token)) throw httpError(400, 'This password reset link is invalid or has expired. Request a new one.');
-  if (password.length < 12 || password.length > 128) {
-    throw httpError(400, 'Choose a password between 12 and 128 characters.');
+  if (password.length < 12 || password.length > 128 || Buffer.byteLength(password, 'utf8') > 72) {
+    throw httpError(400, 'Choose a password with 12-128 characters (at most 72 UTF-8 bytes).');
   }
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
   const passwordHash = await bcrypt.hash(password, 12);
@@ -269,13 +291,15 @@ router.post('/auth/password-reset/confirm', passwordResetLimiter, asyncRoute(asy
   try {
     await client.query('BEGIN');
     const result = await client.query(
-      `SELECT user_id FROM password_reset_tokens
-       WHERE token_hash = $1 AND expires_at > NOW()
-       FOR UPDATE`,
+      `SELECT u.id AS user_id FROM users u JOIN password_reset_tokens t ON t.user_id = u.id
+       WHERE t.token_hash = $1 AND t.expires_at > NOW()
+       FOR UPDATE OF u`,
       [tokenHash]
     );
     if (!result.rowCount) throw httpError(400, 'This password reset link is invalid or has expired. Request a new one.');
     const userId = result.rows[0].user_id;
+    const consumed = await client.query('DELETE FROM password_reset_tokens WHERE token_hash = $1 AND expires_at > NOW() RETURNING user_id', [tokenHash]);
+    if (!consumed.rowCount) throw httpError(400, 'This password reset link is invalid or has expired. Request a new one.');
     await client.query('UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [passwordHash, userId]);
     await client.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [userId]);
     await client.query(`DELETE FROM user_sessions WHERE sess->>'userId' = $1`, [String(userId)]);
@@ -352,7 +376,7 @@ router.put('/profile', requireAuth, asyncRoute(async (req, res) => {
   res.json({ profile: publicUser(result.rows[0]) });
 }));
 
-router.post('/volunteer-applications', requireAuth, applicationLimiter, asyncRoute(async (req, res) => {
+router.post('/volunteer-applications', requireAuth, requireRole('student'), applicationLimiter, asyncRoute(async (req, res) => {
   const interest = clean(req.body.interest, 140);
   const availability = clean(req.body.availability, 140);
   const skills = clean(req.body.skills, 500);

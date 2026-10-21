@@ -1,36 +1,49 @@
+# Blueprint path: render.yaml at the repository root.
 services:
   - type: web
     name: zhenphen
     runtime: node
     region: singapore
     plan: starter
+    rootDir: Zhenphen
     buildCommand: npm ci
     startCommand: npm start
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: 22
       - key: DATABASE_URL
         fromDatabase:
           name: zhenphen-db
           property: connectionString
-      - key: SESSION_SECRET
-        generateValue: true
       - key: DATABASE_SSL
         value: "true"
-      - key: SSU_ADMIN_EMAIL
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: APP_BASE_URL
         sync: false
-      - key: SSU_ADMIN_PASSWORD
+      - key: EMAIL_SMTP_HOST
         sync: false
-      - key: SSU_ADMIN_NAME
-        value: SSU Coordinator
+      - key: EMAIL_SMTP_PORT
+        value: "587"
+      - key: EMAIL_SMTP_SECURE
+        value: "false"
+      - key: EMAIL_SMTP_USER
+        sync: false
+      - key: EMAIL_SMTP_PASSWORD
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
       - key: SITE_ADMIN_EMAIL
         sync: false
       - key: SITE_ADMIN_PASSWORD
         sync: false
-      - key: SITE_ADMIN_NAME
-        value: Zhenphen Administrator
-
+      - key: SSU_ADMIN_EMAIL
+        sync: false
+      - key: SSU_ADMIN_PASSWORD
+        sync: false
 databases:
   - name: zhenphen-db
     databaseName: zhenphen

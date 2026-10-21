@@ -33,4 +33,11 @@ function httpError(status, message) {
   return error;
 }
 
-module.exports = { requireAuth, requireRole, asyncRoute, apiError, httpError };
+function validateId(req, res, next, value) {
+  if (!/^[1-9]\d{0,18}$/.test(value) || BigInt(value) > 9223372036854775807n) {
+    return res.status(400).json({ error: 'Choose a valid record identifier.' });
+  }
+  next();
+}
+
+module.exports = { requireAuth, requireRole, asyncRoute, apiError, httpError, validateId };

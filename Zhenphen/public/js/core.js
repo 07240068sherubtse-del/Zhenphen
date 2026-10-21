@@ -1,4 +1,4 @@
-﻿/* Zhenphen Association — front-end prototype. All records are sample/session-only. */
+/* Zhenphen Association — shared frontend. Account and SSU features use server APIs; financial/ration views are samples. */
 'use strict';
 const AS='assets/';
 const PH={community:AS+'bhutan-community.jpg',volunteers:AS+'volunteers-preparing-boxes-with-food-donations-using-tablet_23-2148732714.avif',volunteerQuote:AS+'bhutan-volunteerism.png',giving:AS+'55916fc307de4a499ab634b8ff4044de.png',clothes:AS+'cloth.jpg',food:AS+'ration.jpg',valley:AS+'taktsahng.jpeg'};
