@@ -53,3 +53,12 @@ test('failed live login/signup never authenticates or saves an account locally',
   assert.equal(vm.runInContext("store.get('signed', false)", context), false);
   assert.ok(!stored.has('zh-member'));
 });
+
+test('password recovery opens code entry after requesting email', () => {
+  const { context } = frontend();
+  let destination;
+  context.location = { assign: value => { destination = value; } };
+  context.displayFormSuccess({ dataset: { form: 'reset' }, elements: { email: { value: 'User@Example.com' } } });
+  assert.equal(destination, 'forgot-password.html?code=1');
+  assert.equal(vm.runInContext("store.get('recoveryEmail', '')", context), 'user@example.com');
+});

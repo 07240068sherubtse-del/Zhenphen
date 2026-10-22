@@ -160,21 +160,18 @@ function createAuthController({ users, emailService, bcrypt = require('bcryptjs'
   async function requestPasswordReset(req, res) {
     const email = clean(req.body.email, 255).toLowerCase();
     if (!validateEmail(email)) throw httpError(400, 'Enter a valid email address.');
-    const { mailer, from, baseUrl } = emailService.configure();
+    const { mailer, from } = emailService.configure();
     const result = await users.findForRecovery([email]);
     const account = result.rows[0];
     if (!account) return res.status(202).json({ message: passwordResetAccepted });
 
-    const token = crypto.randomBytes(32).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    const resetUrl = new URL('/forgot-password.html', `${baseUrl}/`);
-    resetUrl.searchParams.set('token', token);
+    const code = crypto.randomInt(0, 1000000).toString().padStart(6, '0');
+    const tokenHash = verificationHash(`password-reset:${email}`, code);
     await users.pruneResets();
     await users.createReset([tokenHash, account.id]);
 
     try {
-      const link = resetUrl.toString();
-      await emailService.sendPasswordReset(account, link, { mailer, from });
+      await emailService.sendPasswordReset(account, code, { mailer, from });
     } catch (error) {
       await users.removeReset([tokenHash]);
       console.error('Password reset email delivery failed:', error.code || 'SMTP_ERROR');
@@ -184,22 +181,23 @@ function createAuthController({ users, emailService, bcrypt = require('bcryptjs'
   }
 
   async function confirmPasswordReset(req, res) {
-    const token = typeof req.body.token === 'string' ? req.body.token : '';
+    const email = clean(req.body.email, 255).toLowerCase();
+    const code = typeof req.body.code === 'string' ? req.body.code.trim() : '';
     const password = typeof req.body.password === 'string' ? req.body.password : '';
-    if (!/^[a-f0-9]{64}$/.test(token)) throw httpError(400, 'This password reset link is invalid or has expired. Request a new one.');
+    if (!validateEmail(email) || !/^\d{6}$/.test(code)) throw httpError(400, 'This verification code is incorrect, expired, or already used. Request a new code.');
     if (password.length < 12 || password.length > 128 || Buffer.byteLength(password, 'utf8') > 72) {
       throw httpError(400, 'Choose a password with 12-128 characters (at most 72 UTF-8 bytes).');
     }
-    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const tokenHash = verificationHash(`password-reset:${email}`, code);
     const passwordHash = await bcrypt.hash(password, 12);
     const client = await users.connect();
     try {
       await client.begin();
       const result = await client.lockResetAccount([tokenHash]);
-      if (!result.rowCount) throw httpError(400, 'This password reset link is invalid or has expired. Request a new one.');
+      if (!result.rowCount) throw httpError(400, 'This verification code is incorrect, expired, or already used. Request a new code.');
       const userId = result.rows[0].user_id;
       const consumed = await client.consumeReset([tokenHash]);
-      if (!consumed.rowCount) throw httpError(400, 'This password reset link is invalid or has expired. Request a new one.');
+      if (!consumed.rowCount) throw httpError(400, 'This verification code is incorrect, expired, or already used. Request a new code.');
       await client.updatePasswordHash([passwordHash, userId]);
       await client.clearResets([userId]);
       await client.revokeSessions([String(userId)]);

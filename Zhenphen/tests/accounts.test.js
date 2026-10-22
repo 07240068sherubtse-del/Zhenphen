@@ -133,30 +133,29 @@ test('password recovery hides unknown account and does not delete old links when
   assert.ok(!db.calls.some(c => c.sql === 'DELETE FROM password_reset_tokens WHERE user_id = $1'));
 });
 
-test('password recovery sends a correctly addressed link and stores only its hash', async t => {
+test('password recovery sends a correctly addressed code and stores only its hash', async t => {
   const db = database(sql => sql.startsWith('SELECT id, name, email') ? rows({ id: 1, ...signup }) : empty());
   let mail;
   const request = await serve(t, [['/api', api(db, async value => { mail = value; })]]);
   assert.equal((await request('/api/auth/password-reset/request', { email: signup.email })).status, 202);
   assert.equal(mail.to, signup.email);
-  const link = new URL(mail.text.match(/https:\/\/\S+/)[0]);
-  assert.equal(link.origin, 'https://site.example.com');
-  assert.equal(link.pathname, '/forgot-password.html');
+  const code = mail.text.match(/\b\d{6}\b/)[0];
+  assert.ok(!mail.text.includes('https://'));
   const stored = db.calls.find(c => c.sql.includes('INSERT INTO password_reset_tokens'));
-  assert.equal(stored.params[0], crypto.createHash('sha256').update(link.searchParams.get('token')).digest('hex'));
+  assert.equal(stored.params[0], crypto.createHmac('sha256', process.env.SESSION_SECRET).update(`password-reset:${signup.email}:${code}`).digest('hex'));
   assert.ok(stored.sql.includes("INTERVAL '30 minutes'"));
 });
 
 test('password reset consumes valid token, updates password and revokes all sessions; replay rejected', async t => {
   let used = false;
   const db = database((sql, params) => {
-    if (sql.includes('JOIN password_reset_tokens')) return used || params[0] === crypto.createHash('sha256').update('c'.repeat(64)).digest('hex') ? empty() : rows({ user_id: 1 });
+    if (sql.includes('JOIN password_reset_tokens')) return used || params[0] === crypto.createHmac('sha256', process.env.SESSION_SECRET).update(`password-reset:${signup.email}:654321`).digest('hex') ? empty() : rows({ user_id: 1 });
     if (sql.includes('DELETE FROM password_reset_tokens WHERE token_hash')) { used = true; return rows({ user_id: 1 }); }
     return empty();
   });
   const request = await serve(t, [['/api', api(db, undefined, require('bcryptjs'))]]);
-  const body = { token: 'b'.repeat(64), password: 'NewPassword123!' };
-  assert.equal((await request('/api/auth/password-reset/confirm', { ...body, token: 'c'.repeat(64) })).status, 400);
+  const body = { email: signup.email, code: '123456', password: 'NewPassword123!' };
+  assert.equal((await request('/api/auth/password-reset/confirm', { ...body, code: '654321' })).status, 400);
   assert.equal((await request('/api/auth/password-reset/confirm', { ...body, password: 'short' })).status, 400);
   assert.equal((await request('/api/auth/password-reset/confirm', body)).status, 200);
   assert.ok(db.calls.some(c => c.sql.includes('DELETE FROM user_sessions')));

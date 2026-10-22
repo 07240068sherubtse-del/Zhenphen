@@ -193,10 +193,14 @@ function displayFormSuccess(form, title, message, destination, label = 'Continue
     location.assign('join.html?verify=1');
     return;
   }
-  if (['reset', 'reset-confirm'].includes(form.dataset.form)) {
-    const requested = form.dataset.form === 'reset';
+  if (form.dataset.form === 'reset') {
+    store.set('recoveryEmail', form.elements.email.value.trim().toLowerCase());
+    location.assign('forgot-password.html?code=1');
+    return;
+  }
+  if (form.dataset.form === 'reset-confirm') {
     const card = form.closest('.auth-card');
-    card.innerHTML = `${authBrand()}<div class="recovery-success" tabindex="-1"><div class="success-icon" aria-hidden="true">${icon('check', 28)}</div><h1>${requested ? 'Check your inbox' : 'Password updated'}</h1><p>${requested ? 'If an account uses that email, you will receive a password reset link shortly.' : 'Your new password is ready. Log in to return to your account.'}</p>${requested ? '<div class="recovery-tip">Check your spam folder too. The reset link is valid for 30 minutes.</div>' : ''}<a class="btn" href="login.html">Back to log in</a>${requested ? '<a class="recovery-secondary" href="forgot-password.html">Try another email</a>' : ''}</div>`;
+    card.innerHTML = `${authBrand()}<div class="recovery-success" tabindex="-1"><div class="success-icon" aria-hidden="true">${icon('check', 28)}</div><h1>Password updated</h1><p>Your new password is ready. Log in to return to your account.</p><a class="btn" href="login.html">Back to log in</a></div>`;
     card.querySelector('.recovery-success').focus();
     return;
   }
@@ -689,12 +693,12 @@ async function submitLiveForm(form, event) {
     }
 
     if (type === 'reset-confirm') {
-      const token = values.token || '';
-      if (!token) throw new Error('This password reset link is missing or invalid. Request a new one.');
+      const code = (values.code || '').trim();
+      if (!/^\d{6}$/.test(code)) throw new Error('Enter the 6-digit verification code from your email.');
       if (values.password !== values.confirmPassword) throw new Error('The passwords do not match.');
       const result = await apiRequest('/api/auth/password-reset/confirm', {
         method: 'POST',
-        body: JSON.stringify({ token, password: values.password })
+        body: JSON.stringify({ email: values.email, code, password: values.password })
       });
       displayFormSuccess(form, 'Password updated.', result.message, 'login.html', 'Sign in');
       return;

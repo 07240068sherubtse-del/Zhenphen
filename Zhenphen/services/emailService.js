@@ -54,13 +54,13 @@ function createEmailService() {
       html: `<div style="background:#f1f5ef;padding:32px;font-family:Arial,sans-serif;color:#193d33"><div style="max-width:480px;margin:auto;background:#fffefa;padding:36px;border-radius:20px"><img src="cid:zhenphen-logo" alt="Zhenphen Association" width="120" style="display:block;height:auto;margin-bottom:24px"><h1>Verify your email</h1><p>Hello ${escapeHtml(account.name)},</p><p>Enter this code on the Zhenphen verification screen:</p><p style="font-size:36px;font-weight:bold;letter-spacing:8px">${code}</p><p>This code expires in 10 minutes and works once. After verification, you will be redirected to login.</p><p>If you did not create an account, ignore this email.</p></div></div>`
     });
     },
-    async sendPasswordReset(account, link, { mailer, from }) {
+    async sendPasswordReset(account, code, { mailer, from }) {
     return mailer.sendMail({
       from,
       to: account.email,
       subject: 'Reset your Zhenphen password',
-      text: `Hello ${account.name},\n\nUse this one-time link within 30 minutes to reset your password:\n${link}\n\nIf you did not request a password reset, you can ignore this email.`,
-      html: `<p>Hello ${escapeHtml(account.name)},</p><p>Use this one-time link within 30 minutes to reset your Zhenphen password:</p><p><a href="${escapeHtml(link)}">Reset my password</a></p><p>If you did not request a password reset, you can ignore this email.</p>`
+      text: `Hello ${account.name},\n\nEnter this 6-digit verification code on the website within 30 minutes to reset your password:\n${code}\n\nIf you did not request a password reset, you can ignore this email.`,
+      html: `<p>Hello ${escapeHtml(account.name)},</p><p>Enter this verification code on the website to reset your Zhenphen password. It expires in 30 minutes and works once.</p><p style="font-size:32px;font-weight:bold;letter-spacing:6px">${escapeHtml(code)}</p><p>If you did not request a password reset, you can ignore this email.</p>`
     });
     }
   };

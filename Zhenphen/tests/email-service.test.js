@@ -45,14 +45,14 @@ test('verification mail keeps code, expiry, escaped name and existing inline log
   assert.ok(fs.existsSync(message.attachments[0].path));
 });
 
-test('reset email preserves configured URL and delivery failure reaches controller for cleanup', async () => {
+test('reset email includes verification code and delivery failure reaches controller for cleanup', async () => {
   let message;
   const { mail } = service();
   const account = { name: '<Test>', email: 'recipient@example.com' };
   const config = { from: 'sender@example.com', mailer: { sendMail: async value => { message = value; } } };
-  await mail.sendPasswordReset(account, 'https://site.example.com/forgot-password.html?token=test', config);
+  await mail.sendPasswordReset(account, '012345', config);
   assert.equal(message.to, account.email);
-  assert.match(message.text, /https:\/\/site.example.com\/forgot-password.html/);
+  assert.match(message.text, /012345/);
   assert.match(message.text, /30 minutes/);
   assert.match(message.html, /&lt;Test&gt;/);
   config.mailer.sendMail = async () => { throw new Error('Test mail transport failure'); };
