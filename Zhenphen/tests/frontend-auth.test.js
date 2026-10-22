@@ -62,3 +62,24 @@ test('password recovery opens code entry after requesting email', () => {
   assert.equal(destination, 'forgot-password.html?code=1');
   assert.equal(vm.runInContext("store.get('recoveryEmail', '')", context), 'user@example.com');
 });
+
+test('logout navigation explicitly opens the confirmation page instead of downloading the link', async () => {
+  const { context } = frontend();
+  let handler;
+  let destination;
+  let prevented = false;
+  let stopped = false;
+  context.document.addEventListener = (type, callback) => { handler = callback; };
+  context.location = { assign: value => { destination = value; } };
+  const source = fs.readFileSync(path.resolve(__dirname, '../public/js/live.js'), 'utf8');
+  const start = source.lastIndexOf("document.addEventListener('click', async event => {");
+  vm.runInContext(source.slice(start, source.indexOf('void bootLiveApp()', start)), context);
+  await handler({
+    target: { closest: selector => selector === 'a[href="logout.html"]' ? {} : null },
+    preventDefault() { prevented = true; },
+    stopImmediatePropagation() { stopped = true; }
+  });
+  assert.equal(destination, 'logout.html');
+  assert.equal(prevented, true);
+  assert.equal(stopped, true);
+});

@@ -730,6 +730,13 @@ document.addEventListener('submit', event => {
 }, true);
 
 document.addEventListener('click', async event => {
+  const logoutLink = event.target.closest('a[href="logout.html"]');
+  if (logoutLink) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    location.assign('logout.html');
+    return;
+  }
   const logoutButton = event.target.closest('[data-logout]');
   if (!logoutButton) return;
   event.preventDefault();
