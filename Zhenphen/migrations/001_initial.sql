@@ -103,3 +103,5 @@ CREATE TABLE IF NOT EXISTS feedback_messages (
   message VARCHAR(3000) NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_attempts INTEGER NOT NULL DEFAULT 0;

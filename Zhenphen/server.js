@@ -69,7 +69,6 @@ app.use('/api', apiRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ssu', ssuRoutes);
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(path.join(__dirname, 'views')));
 app.use('/', require('./routes'));
 
 app.get('/health', async (req, res) => {
@@ -106,6 +105,9 @@ async function start() {
   }
   const server = await listenOnPort(requestedPort);
   console.log(`Zhenphen server listening on port ${server.address().port}`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`Open your website: http://localhost:${server.address().port}`);
+  }
 
 }
 

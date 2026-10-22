@@ -4,8 +4,8 @@ Audit date: 21 October 2026. This replaces obsolete prototype validation claims.
 
 ## Automated checks actually run
 
-- `npm run check`: 35 application, frontend, script, and test JavaScript files parse successfully.
-- `npm test`: 21 tests passed, with zero failures. These exercise actual Express routers over isolated local HTTP requests. Database queries and mail delivery use explicit in-memory doubles; password hashing is substituted in most route tests; one credential test uses the real bcrypt library. No test loads `.env`, starts the production server, connects to PostgreSQL, or sends email.
+- `npm run check`: 48 application, frontend, script, and test JavaScript files parse successfully.
+- `npm test`: 38 tests passed, with zero failures. These exercise actual Express routers over isolated local HTTP requests. Database queries and mail delivery use explicit in-memory doubles; password hashing is substituted in most route tests; registration, reset, and credential tests use the real bcrypt library. No test loads `.env`, starts the production server, connects to PostgreSQL, or sends email.
 - `npm run release`: generated a release ZIP. Archive integrity and entries checked separately; no `.env`, `.git`, or `node_modules` included, and `.env.example` included.
 - Git ignore checks confirm private environment files and installed dependencies remain excluded.
 
@@ -33,7 +33,7 @@ Use a separate staging deployment/database and mailboxes controlled by the team.
 
 1. Install with `npm ci` in `Zhenphen/`; configure private staging environment values; start the app and verify `/health`. Restart to verify idempotent migration and that bootstrap leaves existing users/passwords unchanged.
 2. Register a student with a real eight-digit college email. Reject seven/nine digits and Gmail under the student option. Register a supporter with a controlled non-college mailbox. Confirm success shows the actual recipient and no login before verification.
-3. Open the verification email on a phone. Confirm the logo, correct sender, public HTTPS host, single-use verification, login after verification, expired-token error, and resend behavior. Request two links, verify one, and ensure the other fails. Test SMTP failure in staging and check account rollback/clear error.
+3. Read the verification email on a phone and enter its code on the website. Confirm the logo, correct sender, public HTTPS host, single-use code verification, login redirection, expired-code error, and resend behavior. Request two links, verify one, and ensure the other fails. Test SMTP failure in staging and check account rollback/clear error.
 4. Request password recovery for known and unknown mailboxes. Check the neutral response, 30-minute expiry, valid reset, all previous links invalidated, and existing sessions rejected after reset. Test failed replacement delivery while an earlier link exists.
 5. Update profile text and a valid photo; reject unsupported/oversized photos. Confirm data persists after reload in a separate browser. Confirm client attempts to change email/role through profile do not succeed.
 6. Submit a student volunteer application and confirm it appears in own activity and administrator counts. Confirm anonymous/supporter denial. Application placement/review is an organizational/manual process, not an implemented approval workflow.
@@ -60,8 +60,34 @@ npm run check
 npm test
 ```
 
-Expected: `Syntax checks passed for 35 JavaScript files`, then `tests 21`, `pass 21`, `fail 0`. Simulated SMTP failure messages belong to negative tests. If the server is already running, stop that process with Ctrl+C in its terminal before restarting the latest code with `npm start`. Success: `Zhenphen server listening on port 3000`. Keep it running. In a second integrated terminal in the same app folder run `npm run smoke:local`; all actual statuses must match the printed expected statuses, ending with `Local smoke checks passed`.
+Expected: `Syntax checks passed for 48 JavaScript files`, then `tests 38`, `pass 38`, `fail 0`. Simulated SMTP failure messages belong to negative tests. If the server is already running, stop that process with Ctrl+C in its terminal before restarting the latest code with `npm start`. Success: `Zhenphen server listening on port 3000`. Keep it running. In a second integrated terminal in the same app folder run `npm run smoke:local`; all actual statuses must match the printed expected statuses, ending with `Local smoke checks passed`.
 
-Complete the browser checklist above using a mailbox you control and a fresh test account. Register at `/join.html`, reject login before verification, open the received verification link on the same device, verify, then log in. Request recovery at `/forgot-password.html`, open the email, choose a new password privately, and confirm the old password and prior sessions no longer work. Signed-out protected pages should redirect to login; signed-in member accounts must be denied administrator APIs. Browser-only page shells are not the security boundary: the protected API denial is required.
+Complete the browser checklist above using a mailbox you control and a fresh test account. Register at `/join.html`, reject login before verification, read the received six-digit code, enter it on the website, and confirm redirection to login. Request recovery at `/forgot-password.html`, open the email, choose a new password privately, and confirm the old password and prior sessions no longer work. Signed-out protected pages should redirect to login; signed-in member accounts must be denied administrator APIs. Browser-only page shells are not the security boundary: the protected API denial is required.
 
 The names required for local database and SMTP settings were present, but values and credential validity were not printed or verified. If setup fails, edit only local `.env`: `DATABASE_URL`, `SESSION_SECRET`, `APP_BASE_URL`, `EMAIL_SMTP_HOST`, `EMAIL_SMTP_PORT`, `EMAIL_SMTP_SECURE`, `EMAIL_SMTP_USER`, `EMAIL_SMTP_PASSWORD`, and `EMAIL_FROM`, following `.env.example`. For laptop-browser testing use `APP_BASE_URL=http://localhost:3000`; phone testing needs a reachable LAN/public origin. Do not share credentials or token URLs. Actual registration email receipt, valid-link verification/reset, browser protected-page behavior, and VS Code integrated-terminal execution remain user-run checks.
+
+## EJS view conversion
+
+Converted all 27 HTML view files to EJS, replaced the unused home scaffold with an include of the real homepage, removed static exposure of the views directory, and registered known templates as Express render routes. Existing `.html` page URLs remain supported. The added HTTP test rendered every EJS template, checked the homepage, and confirmed direct `.ejs` and unknown template requests return 404. All 38 tests passed; 36 JavaScript files passed syntax checks.
+
+## Numeric verification update
+
+Signup now emails a six-digit code and opens `join.html?verify=1`. Users enter their signup email and code; only successful verification redirects to `login.html?verified=1`. Codes expire after 10 minutes; five failed attempts per account lock verification until resend. Successful resend replaces old codes. A migration adds the persisted failed-attempt counter. Old verification email links no longer activate an account; request a fresh code. Automated coverage includes keyed code storage, leading-zero codes, invalid/expired/reused codes, lockout, and frontend redirects with API doubles. Inbox delivery and full browser testing still require a controlled mailbox. Password reset remains link-based.
+
+## Authentication follow-up
+
+Inspected the existing API, schema, live frontend, interactions, package scripts, environment example, ignore rules, and README. Reused the existing routes and preserved numeric signup verification. No new authentication routes, schema changes, deployment, or design changes were introduced in this follow-up.
+
+Executed in the actual local app folder using the agent's PowerShell execution tool, not VS Code's integrated terminal: `npm ci` (131 packages installed, audit reported zero vulnerabilities), `npm run check`, and `npm test -- --runInBand`. The built-in Node runner supports the requested argument through `scripts/test.js`. Frontend regressions now cover poisoned browser identity, API failure, and malformed success responses. Additional backend tests verify actual bcrypt hashes, identical known/unknown resend/recovery responses, and SMTP error sanitization. Database/mail remain mocked, with no real mail or destructive data cleanup.
+
+VS Code integrated-terminal execution, inbox delivery, actual PostgreSQL transaction/concurrency behavior, and the full browser email/reset flow are not established by these tests. The existing `.env.example` already contains the required harmless settings and was retained. The real `.env` was not edited, printed, or included in packaging.
+
+## Backend structure refactor (22 October 2026)
+
+Extracted the existing authentication handlers into `controllers/authController.js`, the other API callbacks into `controllers/apiController.js`, user/auth persistence into `repositories/userRepository.js`, SMTP/messages into `services/emailService.js`, and shared validation/serialization helpers into `utils/account.js`. The route file now contains wiring and middleware. This refactor did not change the database schema, frontend, response messages, or authentication paths.
+
+Added direct tests for session regeneration/failure, logout and stale sessions; SMTP TLS configuration, sender/recipient, escaped HTML, inline logo, reset URL/expiry, and delivery failure; and transaction connection binding/parameterization. Existing HTTP tests now inject dependencies through the controller/email factories while exercising the actual repository SQL. Tests use safe mocks; no live credentials or SMTP. The local shell executes the tests from `Zhenphen/`; the agent cannot control VS Code's integrated terminal. Live inbox delivery remains unverified.
+
+## SSU reporting exports
+
+Added volunteer totals, member activity, and event totals CSV buttons using the existing authorized overview API. Automated tests cover unique-volunteer counting versus registrations, application totals, attendance metrics, member/event rows, CSV escaping, spreadsheet formula neutralization, and no download on failed API access. `npm run check` passed for 48 JavaScript files and `npm test -- --runInBand` passed all 38 tests in the local app folder. No real member report was downloaded or browser-verified during these tests.

@@ -6,10 +6,32 @@ const LOGO=AS+'Zhenphen Association logo.png';
 const paths={heart:'M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z',people:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M16 3a4 4 0 0 1 0 8 M22 21v-2a4 4 0 0 0-3-3.9 M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0',box:'m21 8-9 5-9-5 M12 13v9 M3 7l9-5 9 5v10l-9 5-9-5Z M7.5 4.5l9 5',shirt:'m8 3-5 2-2 5 5 2v9h12v-9l5-2-2-5-5-2a4 4 0 0 1-8 0Z',shield:'M12 22s9-4 9-11V5l-9-3-9 3v6c0 7 9 11 9 11Z m-4-10 3 3 5-6',check:'m5 12 4 4L19 6',menu:'M4 6h16 M4 12h16 M4 18h16',close:'m6 6 12 12 M18 6 6 18',mail:'M3 5h18v14H3Z m0 0 9 7 9-7',phone:'M22 16.9v3a2 2 0 0 1-2.2 2A20 20 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7l.5 3a2 2 0 0 1-.6 1.7L7.7 9.7a16 16 0 0 0 6.6 6.6l1.3-1.3a2 2 0 0 1 1.7-.6l3 .5a2 2 0 0 1 1.7 2Z',pin:'M21 10c0 7-9 12-9 12S3 17 3 10a9 9 0 0 1 18 0Z M15 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0',grid:'M3 3h7v7H3Z M14 3h7v7h-7Z M3 14h7v7H3Z M14 14h7v7h-7Z',wallet:'M3 5h17v15H3Z M3 5V3h15v2 M15 10h7v6h-7Z M18 13h1',calendar:'M4 5h16v16H4Z M4 10h16 M8 2v6 M16 2v6',user:'M20 21v-2a7 7 0 0 0-14 0v2 M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0',logout:'M9 21H3V3h6 M9 12h13 m-5-5 5 5-5 5',search:'M20 20l-5-5 M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0',download:'M12 3v12 m-5-5 5 5 5-5 M4 16v5h16v-5',clock:'M12 8v5l3 2 M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',leaf:'M20 3C10 2 2 7 4 15s15 7 16-12Z M4 21l12-12',chart:'M3 3v18h18 M7 15l4-5 4 3 6-8',lock:'M5 10h14v11H5Z M8 10V6a4 4 0 0 1 8 0v4',info:'M12 11v6 M12 7h.01 M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',sun:'M12 2v2 M12 20v2 M2 12h2 M20 12h2 m-3-7 1-1 M5 19l2-2 M5 5l2 2 m10 10 2 2 M17 12a5 5 0 1 1-10 0 5 5 0 0 1 10 0',shoe:'M3 14h6l4-4 4 5 5 2v4H2v-5Z M8 14l-2-5 4-3 3 4',blanket:'M5 3h14v18H5Z M5 7h14 M9 3v18 M15 3v18 M5 17h14'};
 const icon=(name,size=21)=>`<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${paths[name]||paths.heart}"/></svg>`;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const store={get(k,f){try{return JSON.parse(sessionStorage.getItem('zh-'+k))??f}catch{return f}},set(k,v){try{sessionStorage.setItem('zh-'+k,JSON.stringify(v));return true}catch{return false}},remove(k){try{sessionStorage.removeItem('zh-'+k)}catch{}}};
-async function apiRequest(url,options={}){const response=await fetch(url,{credentials:'same-origin',...options,headers:{...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{})}});if(response.status===204)return null;const data=await response.json().catch(()=>({error:'The server returned an unreadable response.'}));if(!response.ok)throw new Error(data.error||'The request could not be completed.');return data}
-const member=()=>store.get('member',{name:'Dechen',email:'demo@zhenphen.org',phone:'',skills:''});
-const memberRole=()=>{const m=member();return m.role|| (m.memberType==='Sherubtse College student'?'student':'supporter')};
+// Identity is memory-only and populated from successful server API responses.
+// Browser storage is used only for non-authentication UI preferences and previews.
+const identityState = new Map();
+const identityKeys = new Set(['signed', 'member']);
+const store = {
+  get(key, fallback) {
+    if (identityKeys.has(key)) return identityState.get(key) ?? fallback;
+    try { return JSON.parse(sessionStorage.getItem('zh-' + key)) ?? fallback; } catch { return fallback; }
+  },
+  set(key, value) {
+    if (identityKeys.has(key)) { identityState.set(key, value); return true; }
+    try { sessionStorage.setItem('zh-' + key, JSON.stringify(value)); return true; } catch { return false; }
+  },
+  remove(key) {
+    if (identityKeys.has(key)) identityState.delete(key);
+    try { sessionStorage.removeItem('zh-' + key); } catch {}
+  }
+};
+for (const storage of ['sessionStorage', 'localStorage']) {
+  for (const key of ['zh-signed', 'zh-member', 'zh-demo-username']) {
+    try { globalThis[storage]?.removeItem(key); } catch {}
+  }
+}
+async function apiRequest(url,options={}){let response;try{response=await fetch(url,{credentials:'same-origin',...options,headers:{...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{})}})}catch{throw new Error('The live service could not be reached. Please check your connection and try again.')}if(response.status===204)return null;const data=await response.json().catch(()=>({error:'The server returned an unreadable response.'}));if(!response.ok)throw new Error(data.error||'The request could not be completed.');return data}
+const member=()=>store.get('member',{name:'Community member',email:'',phone:'',skills:''});
+const memberRole=()=>{const m=member();return m.role || ''};
 const roleDashboardPath={student:'student-dashboard.html',supporter:'supporter-dashboard.html',admin:'admin-dashboard.html',ssuAdmin:'ssu-admin-dashboard.html'};
 const rolePageAccess={student:['student-dashboard','activity','donations','profile'],supporter:['supporter-dashboard','money','donations','profile'],admin:['admin-dashboard','money','rations','activity','profile','ssu-admin-dashboard'],ssuAdmin:['ssu-admin-dashboard','profile']};
 const canAccessMemberPage=(role,targetPage)=>rolePageAccess[role]?.includes(targetPage)??false;
@@ -23,7 +45,11 @@ const button=(t,l,cl='')=>`<a class="btn ${cl}" href="${l}">${t}</a>`;
 const credit=`Bhutan community life · <a href="credits.html">Photo: WFP</a><br>Illustrative image, not a Zhenphen event`;
 const pageTitle=(tag,title,desc)=>`<section class="page-title"><div class="wrap"><div class="breadcrumb"><a href="index.html">Home</a><span>/</span>${tag}</div>${eyebrow(tag)}<h1>${title}</h1>${desc?`<p>${desc}</p>`:''}</div></section>`;
 const cta=()=>`<section class="banner"><div class="wrap banner-inner"><div>${eyebrow('A little kindness. A lasting difference.')}<h2>A stronger community<br>begins with all of us.</h2><p>Give what you can. Share what you know. Be there for someone.</p></div>${button('Find your way to help','donation.html','gold')}</div></section>`;
-const field=(label,name,type='text',placeholder='',required=true,full=false,value='')=>`<div class="field ${full?'full':''}"><label for="${name}">${label}${required?' <span>*</span>':''}</label><input id="${name}" name="${name}" type="${type}" placeholder="${placeholder}" ${required?'required':''} ${value?`value="${esc(value)}"`:''} ${type==='email'?'autocomplete="email"':''} ${type==='tel'?'autocomplete="tel"':''}></div>`;
+const field=(label,name,type='text',placeholder='',required=true,full=false,value='')=>{
+  const input=`<input id="${name}" name="${name}" type="${type}" placeholder="${placeholder}" ${required?'required':''} ${value?`value="${esc(value)}"`:''} ${type==='email'?'autocomplete="email"':''} ${type==='tel'?'autocomplete="tel"':''}>`;
+  const control=type==='password'?`<div class="password-control">${input}<button class="password-toggle" type="button" data-password-toggle aria-controls="${name}" aria-label="Show ${esc(label.toLowerCase())}">Show</button></div>`:input;
+  return `<div class="field ${full?'full':''}"><label for="${name}">${label}${required?' <span>*</span>':''}</label>${control}</div>`;
+};
 const select=(label,name,items,full=false,extraClass='')=>`<div class="field ${full?'full':''} ${extraClass}"><label for="${name}">${label} <span>*</span></label><select id="${name}" name="${name}" required><option value="">Select an option</option>${items.map(t=>`<option>${t}</option>`).join('')}</select></div>`;
 const area=(label,name,placeholder='',required=false)=>`<div class="field full"><label for="${name}">${label} <span>${required?'*':'(optional)'}</span></label><textarea id="${name}" name="${name}" placeholder="${placeholder}" ${required?'required':''}></textarea></div>`;
 const formEnd=(label)=>`<div class="form-error" role="alert" hidden></div><div class="form-foot"><button type="submit" class="btn">${label}</button><p class="form-note">${icon('info',16)}Interactive preview only. Forms do not contact coordinators, send messages, or process payments.</p></div>`;

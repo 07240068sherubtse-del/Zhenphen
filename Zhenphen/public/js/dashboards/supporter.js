@@ -7,7 +7,7 @@ window.ZhenphenDashboardPages.supporter = function () {
   }, 0);
 
   return dashboardShell(
-    `${dashHeading('Community supporter space', `Welcome, ${esc(member().name.split(' ')[0])}.`, 'Explore your demo contributions and review the illustrative fund dashboard.', button('View financial transparency', 'money-dashboard.html', 'small'))}
+    `${dashHeading('Community supporter space', `Welcome, ${esc(member().name.split(' ')[0])}.`, 'Manage your account and explore ways to support the community. Financial figures remain illustrative.', button('View financial transparency', 'money-dashboard.html', 'small'))}
     ${statCards([
       ['My contributions', String(contributions.length), 'Recorded this session', 'heart'],
       ['My recorded giving', nu(total), 'Fictional demo value only', 'wallet'],

@@ -10,8 +10,13 @@ function bindSsuEvents() {
     const statusButton = event.target.closest('[data-ssu-status]');
     const attendanceButton = event.target.closest('[data-ssu-attendance]');
     const exportButton = event.target.closest('[data-ssu-export]');
+    const reportButton = event.target.closest('[data-ssu-report]');
     try {
-      if (exportButton) {
+      if (reportButton) {
+        reportButton.disabled = true;
+        try { await downloadSsuReport(reportButton.dataset.ssuReport); }
+        finally { reportButton.disabled = false; }
+      } else if (exportButton) {
         const eventRecord = window.liveSsuEvents.find(item => item.id === exportButton.dataset.ssuExport);
         if (!eventRecord) throw new Error('Attendance for this work could not be found. Refresh the dashboard and try again.');
         downloadSsuAttendance(eventRecord);
@@ -74,6 +79,60 @@ function bindSsuEvents() {
   });
 }
 
+function buildSsuReport(report, type) {
+  const { events, members, metrics } = report;
+  const registrations = new Map();
+  for (const event of events) {
+    for (const attendee of event.attendees || []) {
+      const id = String(attendee.userId);
+      registrations.set(id, (registrations.get(id) || 0) + 1);
+    }
+  }
+  if (type === 'summary') return [
+    ['Metric', 'Count'],
+    ['Total member accounts', members.length],
+    ['Unique volunteers registered for events', registrations.size],
+    ['Unique volunteers with recorded attendance', metrics.volunteersServed],
+    ['Volunteers working now', metrics.activeVolunteers],
+    ['Currently signed-in accounts (last 2 minutes)', metrics.activeUsers],
+    ['Volunteer applications', members.reduce((sum, member) => sum + Number(member.volunteerApplications || 0), 0)],
+    ['Total event registrations', events.reduce((sum, event) => sum + Number(event.registrationCount || 0), 0)],
+    ['Total events', events.length],
+    ['Open upcoming opportunities', metrics.openEvents]
+  ];
+  if (type === 'members') return [
+    ['Member ID', 'Name', 'Email', 'Volunteer applications', 'Event registrations', 'Events attended', 'Current volunteer work'],
+    ...members.map(member => [member.id, member.name, member.email, member.volunteerApplications,
+      registrations.get(String(member.id)) || 0, member.participations, (member.activeWork || []).join('; ')])
+  ];
+  if (type === 'events') return [
+    ['Event ID', 'Title', 'Date', 'Location', 'Capacity', 'Registrations', 'Attended', 'Sign-up status', 'Work status'],
+    ...events.map(event => [event.id, event.title, event.date, event.location, event.capacity ?? 'No limit',
+      event.registrationCount, event.attendedCount, event.status, event.workStatus])
+  ];
+  throw new Error('Choose a valid SSU report.');
+}
+
+async function downloadSsuReport(type) {
+  // Fetch fresh authorized database data; never export a stale browser snapshot.
+  const report = await apiRequest('/api/ssu/admin/overview');
+  const rows = buildSsuReport(report, type);
+  const cell = value => {
+    const text = String(value ?? '');
+    const safe = /^[\s\u0000-\u001f]*[=+\-@]/.test(text) ? "'" + text : text;
+    return '"' + safe.replaceAll('"', '""') + '"';
+  };
+  const csv = rows.map(row => row.map(cell).join(',')).join('\r\n');
+  const url = URL.createObjectURL(new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8;' }));
+  const link = document.createElement('a');
+  link.href = url;
+  const date = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Thimphu' }).format(new Date());
+  link.download = `ssu-${type}-${date}.csv`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+  toast('SSU report downloaded.');
+}
+
 function downloadSsuAttendance(eventRecord) {
   const attendees = eventRecord.attendees || [];
   const attendedCount = eventRecord.attendedCount ?? attendees.filter(attendee => ['Checked in', 'Checked out'].includes(attendee.attendance)).length;
@@ -114,18 +173,24 @@ function navigateToRoleHome(user) {
   location.replace(destinations[user.role] || 'login.html');
 }
 
+function validServerUser(user) {
+  return user && typeof user === 'object' && /^\d+$/.test(String(user.id))
+    && typeof user.email === 'string' && user.email.includes('@')
+    && ['student', 'supporter', 'admin', 'ssuAdmin'].includes(user.role);
+}
+
 function rememberSignedInUser(user) {
+  if (!validServerUser(user)) throw new Error('The server returned an invalid sign-in response. Please try again.');
   if (!store.set('member', user) || !store.set('signed', true)) {
     throw new Error('This browser could not start your session. Enable session storage and try again.');
   }
 }
 
 function displayFormSuccess(form, title, message, destination, label = 'Continue') {
-  if (form.dataset.form === 'join') {
-    const email = form.elements.email.value.trim();
-    const card = form.closest('.auth-card');
-    card.innerHTML = `${authBrand()}<div class="recovery-success" tabindex="-1"><div class="success-icon" aria-hidden="true">${icon('check', 28)}</div><h1>Verify your email</h1><p>We sent a verification link to <strong>${esc(email)}</strong>. Open the email and select Verify my email to activate your account.</p><div class="recovery-tip">The link is valid for 24 hours. If you do not see the email, check your spam folder.</div><a class="btn" href="login.html">Go to log in</a><a class="recovery-secondary" href="join.html?resend=1">Resend verification email</a></div>`;
-    card.querySelector('.recovery-success').focus();
+  if (['join', 'resend-verification'].includes(form.dataset.form)) {
+    const email = form.elements.email.value.trim().toLowerCase();
+    store.set('verificationEmail', email);
+    location.assign('join.html?verify=1');
     return;
   }
   if (['reset', 'reset-confirm'].includes(form.dataset.form)) {
@@ -252,12 +317,19 @@ async function loadMemberData() {
 }
 
 async function bootLiveApp() {
+  store.set('signed', false);
+  store.remove('member');
   let user = null;
+  let sessionUnavailable = false;
   try {
     const result = await apiRequest('/api/auth/session');
+    if (!result || !Object.hasOwn(result, 'user') || (result.user !== null && !validServerUser(result.user))) {
+      throw new Error('Invalid session response');
+    }
     user = result.user;
   } catch (requestError) {
-    console.error('Unable to verify the server session:', requestError);
+    sessionUnavailable = true;
+    console.error('Unable to verify the server session.');
   }
   if (user) {
     store.set('member', user);
@@ -278,6 +350,19 @@ async function bootLiveApp() {
   }
 
   render();
+  if (sessionUnavailable) {
+    const notice = document.createElement('p');
+    notice.className = 'form-error';
+    notice.setAttribute('role', 'alert');
+    notice.textContent = 'The sign-in service is unavailable. You are not signed in. Please try again shortly.';
+    document.getElementById('app')?.prepend(notice);
+  }
+  if (document.body.dataset.page === 'login' && new URLSearchParams(location.search).get('verified') === '1') {
+    const notice = document.createElement('p');
+    notice.setAttribute('role', 'status');
+    notice.textContent = 'Email verified successfully. You can now log in.';
+    document.querySelector('.auth-card h1')?.insertAdjacentElement('afterend', notice);
+  }
   if (['forgot', 'join'].includes(document.body.dataset.page) && new URLSearchParams(location.search).has('token')) {
     history.replaceState(null, '', location.pathname);
   }
@@ -315,7 +400,7 @@ async function bootLiveApp() {
     joinForm.elements.password.autocomplete = 'new-password';
     joinForm.querySelector('button[type="submit"]').textContent = 'Create account';
     const formNote = joinForm.querySelector('.form-note');
-    if (formNote) formNote.textContent = 'We will send a verification email to activate your account before you log in.';
+    if (formNote) formNote.textContent = 'We will send a 6-digit verification code to activate your account before you log in.';
     const consentText = [...consent.childNodes].find(node => node.nodeType === Node.TEXT_NODE);
     if (consentText) consentText.textContent = 'I agree to create a Zhenphen community account.';
   }
@@ -482,7 +567,10 @@ async function submitLiveForm(form, event) {
   try {
     if (type === 'verify-email' || type === 'resend-verification') {
       const result = await apiRequest('/api/auth/verification/' + (type === 'verify-email' ? 'confirm' : 'resend'), { method: 'POST', body: JSON.stringify(values) });
-      displayFormSuccess(form, type === 'verify-email' ? 'Email verified.' : 'Check your inbox.', result.message, 'login.html', 'Continue to sign in');
+      if (type === 'verify-email') {
+        store.remove('verificationEmail');
+        location.replace('login.html?verified=1');
+      } else displayFormSuccess(form, 'Check your inbox.', result.message, 'login.html');
       return;
     }
     if (type === 'login') {

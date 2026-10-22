@@ -9,7 +9,8 @@ function add(relative) {
   const stat = fs.lstatSync(absolute);
   if (stat.isSymbolicLink()) return;
   const name = path.basename(relative);
-  if (excluded.has(name) || (name.startsWith('.') && name !== '.env.example') || name.endsWith('.log') || name.endsWith('.zip')) return;
+  if (excluded.has(name) || (name.startsWith('.') && name !== '.env.example')
+      || /\.(log|zip|pem|key|p12|pfx)$/i.test(name) || /^(credentials|secrets).*\.json$/i.test(name)) return;
   if (stat.isDirectory()) {
     for (const item of fs.readdirSync(absolute).sort()) add(path.join(relative, item));
   } else entries.push({ name: relative.replaceAll('\\', '/'), data: fs.readFileSync(absolute) });

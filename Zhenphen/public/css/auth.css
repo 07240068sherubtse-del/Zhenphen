@@ -231,7 +231,7 @@
   font-size: 0.74rem;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .auth-layout {
     grid-template-columns: minmax(0, 0.9fr) minmax(420px, 1.1fr);
   }
@@ -245,7 +245,7 @@
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .auth-layout {
     display: flex;
     flex-direction: column;
@@ -387,3 +387,18 @@ body[data-page="forgot"] .form-note svg { flex-shrink: 0; }
 .recovery-success > .btn { margin-top: 24px; }
 .recovery-tip + .btn { margin-top: 0; }
 .recovery-secondary { display: block; margin-top: 20px; text-align: center; color: #315d49; font-size: .8rem; text-underline-offset: 4px; }
+
+/* Keep long account messages and narrow-screen controls inside the card. */
+.auth-card { overflow-wrap: anywhere; }
+.auth-card .password-control input { padding-right: 76px; }
+@media (max-width: 480px) {
+  .auth-card .field input,
+  .auth-card .field select,
+  .auth-card .field textarea,
+  body:is([data-page="login"], [data-page="forgot"]) .field input { font-size: 1rem; }
+  .auth-options { flex-wrap: wrap; }
+  .auth-bottom a,
+  .login-verification a,
+  .recovery-secondary,
+  .auth-options > a { display: inline-flex; align-items: center; min-height: 44px; }
+}

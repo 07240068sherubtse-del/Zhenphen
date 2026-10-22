@@ -19,6 +19,8 @@ function load(relative, mocks) {
 
 async function serve(t, routers, user = null) {
   const app = express();
+  app.set('view engine', 'ejs');
+  app.set('views', path.resolve(__dirname, '../views'));
   app.use(express.json());
   app.use((req, res, next) => {
     req.user = user;

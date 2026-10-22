@@ -230,3 +230,87 @@
   .home-help-grid .card-body, .home-help-grid .help-card:last-child .card-body { padding: 20px; }
 }
 @media (max-width: 680px) { .home-help-grid { grid-template-columns: 1fr; } }
+
+/* Let dashboard content shrink within its grid before a table scrolls. */
+.dash-panel, .dash-heading > div, .panel-heading > div, .search-wrap,
+.side-user > div:last-child { min-width: 0; }
+.dash-heading, .panel-heading { flex-wrap: wrap; }
+.dash-heading .btn, .panel-heading .btn { flex-shrink: 0; }
+.side-user strong, .dash-heading h1, .stat-card strong,
+.activity-row > div, .profile-skill-list span { overflow-wrap: anywhere; }
+.sidebar { overflow-y: auto; }
+.table-scroll { min-width: 0; overscroll-behavior-x: contain; }
+
+@media (max-width: 900px) {
+  .dash-panel:has(.chart) { overflow-x: auto; overscroll-behavior-x: contain; }
+  .chart { min-width: 480px; }
+  .chart text { font-size: 16px; }
+}
+
+@media (max-width: 767px) {
+  .sidebar { max-width: calc(100vw - 48px); }
+  .menu-toggle { flex-shrink: 0; }
+  .btn.small { min-height: 44px; }
+  .dash-content .btn { max-width: 100%; text-align: center; white-space: normal; }
+  .panel-heading select { max-width: 100%; }
+  .chart-legend { flex-wrap: wrap; gap: 8px 16px; }
+  .field input, .field select, .field textarea, .toolbar input, .toolbar select { font-size: 1rem; }
+  .table-scroll { margin-inline: 0; }
+}
+
+@media (max-width: 360px) {
+  .hero h1 { font-size: clamp(2.2rem, 11.5vw, 2.9rem); }
+  .stat-grid { grid-template-columns: minmax(0, 1fr); }
+  .mobile-menu.open { padding-inline: 20px; }
+}
+
+/* Shared controls: clear focus, stable sizing, and an explicit password action. */
+.password-control { position: relative; min-width: 0; }
+.password-control input { padding-right: 76px; }
+.password-toggle {
+  position: absolute; inset: 4px 4px 4px auto; min-width: 62px; min-height: 44px;
+  padding: 6px 10px; border-radius: 6px; background: transparent;
+  color: var(--forest); font-size: .8125rem; font-weight: 700;
+}
+.password-toggle:hover { background: #edf2e9; }
+.password-control:focus-within .password-toggle { color: var(--deep); }
+.field input:hover:not(:focus), .field textarea:hover:not(:focus), .field select:hover:not(:focus) { border-color: #8a9e8c; }
+.btn:focus-visible, .password-toggle:focus-visible { outline: 3px solid #ad7625; outline-offset: 3px; }
+
+/* Keep the homepage's three routes equally clear and easy to scan. */
+body[data-page="home"] .hero h1 { text-wrap: balance; overflow-wrap: anywhere; }
+body[data-page="home"] .hero .intro { max-width: 42ch; }
+.home-help-grid .help-card, .home-help-grid .help-card:last-child { display: flex; flex-direction: column; }
+.home-help-grid .card-image { flex: 0 0 225px; }
+.home-help-grid .card-body, .home-help-grid .help-card:last-child .card-body { display: flex; flex: 1; flex-direction: column; align-items: flex-start; }
+.home-help-grid .card-top { width: 100%; }
+.home-help-grid .card-body > .btn { margin-top: auto; }
+
+/* Dashboard hierarchy: separate task groups, emphasize values, and soften chrome. */
+.dash-main { background: #f3f4ee; }
+.dash-heading { align-items: flex-start; }
+.dash-heading h1 { line-height: 1.18; text-wrap: balance; }
+.dash-heading p { max-width: 68ch; line-height: 1.75; }
+.dash-heading .eyebrow { margin-bottom: 12px; }
+.dash-panel { border-radius: 12px; box-shadow: 0 3px 12px #193d3305; }
+.dash-content > .dash-panel + .dash-panel { margin-top: 24px; }
+.panel-heading h2 { font-size: 1.125rem; font-weight: 600; line-height: 1.4; }
+.panel-heading p { max-width: 70ch; line-height: 1.7; }
+.stat-card { border-radius: 12px; }
+.stat-card strong { font-variant-numeric: tabular-nums; letter-spacing: -.045em; }
+.stat-card small { line-height: 1.65; }
+.side-links a { border: 1px solid transparent; }
+.side-links a.active { border-color: #dfc17d40; box-shadow: inset 3px 0 var(--gold); }
+.side-links a:focus-visible { outline-color: var(--gold); outline-offset: 1px; }
+.dash-content table th { font-weight: 600; }
+.dash-content table td { font-variant-numeric: tabular-nums; }
+.dash-content tbody tr:hover { background: #f1f5ed; }
+.dash-content .table-scroll { border: 1px solid var(--line); border-radius: 8px; }
+.dash-content .table-scroll:focus-visible { outline-offset: 3px; }
+.dash-content > section[id] { scroll-margin-top: 96px; }
+
+@media (max-width: 767px) {
+  .dash-content > .dash-panel + .dash-panel { margin-top: 18px; }
+  .panel-heading h2 { font-size: 1.0625rem; }
+  .dash-heading .eyebrow { line-height: 1.65; }
+}

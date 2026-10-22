@@ -12,18 +12,28 @@ window.ZhenphenDashboardPages['ssu-admin'] = function () {
 
   return dashboardShell(
     `${dashHeading('Sherubtse Social Service Unit × Zhenphen Association', 'SSU member & work overview', 'Manage collaborative service work, member participation, and current volunteer activity.', '')}
-    <div class="callout"><h3>Joint SSU–Zhenphen service workspace</h3><p>All work activities and events published here are collaborations between the Sherubtse Social Service Unit and Zhenphen Association. Published opportunities display this partnership to students and the community.</p></div>
+    <nav class="workspace-nav" aria-label="SSU workspace sections"><a href="#ssu-reports">${icon('download',17)}Reports</a><a href="#ssu-members">${icon('people',17)}Members</a><a href="#ssu-publish">${icon('calendar',17)}Publish activity</a><a href="#ssu-activities">${icon('check',17)}Manage activities</a></nav>
+    <p class="ssu-workspace-note">${icon('leaf',18)}A shared service workspace for the Sherubtse Social Service Unit and Zhenphen Association.</p>
     ${statCards([
       ['Open opportunities', `<span data-live-open-event-count>${openEvents.length}</span>`, 'Available for student sign-up', 'calendar'],
       ['Currently signed in', `<span data-live-active-user-count>${activeUserTotal}</span>`, 'Unique accounts · last 2 minutes', 'people'],
       ['Volunteers working now', `<span data-live-volunteer-count>${activeVolunteerTotal}</span>`, 'Checked in to work marked in progress', 'check'],
       ['Volunteers served so far', '<span data-live-served-volunteer-count>0</span>', 'Unique volunteers with recorded attendance', 'people']
     ])}
-    <section class="dash-panel ssu-members-panel">
+    <section class="dash-panel ssu-reports-panel" id="ssu-reports" aria-labelledby="ssu-reports-title">
+      <div class="panel-heading"><div><h2 id="ssu-reports-title">Download SSU reports</h2><p>Choose a report. Each download uses current database records and opens in Excel.</p></div><span class="report-format">CSV</span></div>
+      <div class="ssu-report-grid">
+        <button class="ssu-report-card" type="button" data-ssu-report="summary">${icon('chart',24)}<span><strong>Volunteer totals</strong><small>Registrations, recorded attendance, and applications.</small><span class="report-download">Download CSV ${icon('download',16)}</span></span></button>
+        <button class="ssu-report-card" type="button" data-ssu-report="members">${icon('people',24)}<span><strong>Member activity</strong><small>Names, emails, participation, and current work.</small><span class="report-download">Download CSV ${icon('download',16)}</span></span></button>
+        <button class="ssu-report-card" type="button" data-ssu-report="events">${icon('calendar',24)}<span><strong>Event totals</strong><small>Activity dates, capacity, and attendance counts.</small><span class="report-download">Download CSV ${icon('download',16)}</span></span></button>
+      </div>
+      <p class="field-help">Member reports include names and email addresses. Share them only with authorized SSU staff. Financial records are not included because payments are unavailable.</p>
+    </section>
+    <section class="dash-panel ssu-members-panel" id="ssu-members">
       <div class="panel-heading"><div><h2>Member participation & donations</h2><p>Per-user contribution totals and current volunteer work.</p></div><button class="btn outline small" type="button" data-refresh-ssu>Refresh live counts</button></div>
       <div data-ssu-member-table>${ssuMemberTable(contributionMembers)}</div>
     </section>
-    <section class="dash-panel ssu-event-create">
+    <section class="dash-panel ssu-event-create" id="ssu-publish">
       <div class="panel-heading"><div><h2>Publish a joint service activity</h2><p>Every activity published here is a collaboration between SSU and Zhenphen. Students can see open opportunities on the website and student dashboard.</p></div>${icon('calendar', 21)}</div>
       <form data-form="ssu-event">
         <div class="field-grid">
@@ -36,7 +46,7 @@ window.ZhenphenDashboardPages['ssu-admin'] = function () {
         ${formEnd('Publish opportunity')}
       </form>
     </section>
-    <section class="dash-panel ssu-event-admin-list">
+    <section class="dash-panel ssu-event-admin-list" id="ssu-activities">
       <div class="panel-heading"><div><h2>Published SSU–Zhenphen collaborations</h2><p>Review registration totals and manage whether sign-up is open.</p></div></div>
       <div data-ssu-event-list>${ssuAdminEventList(events, registrations)}</div>
     </section>`,

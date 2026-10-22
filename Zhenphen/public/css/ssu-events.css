@@ -86,3 +86,26 @@
 @media(max-width:767px){.help-grid{gap:16px}.card-image{height:clamp(155px,28vw,200px)}.card-body{padding:21px}.help-card.compact .card-body{padding:24px}}
 @media(max-width:480px){.help-grid{grid-template-columns:1fr;gap:14px}.help-grid .help-card:last-child{grid-column:auto}.card-image{height:205px}.card-body{padding:23px}.help-card.compact .card-body{padding:25px}}
 @media(prefers-reduced-motion:reduce){.help-card,.card-image img{transition:none}}
+
+/* Put common SSU tasks and their exports within easy reach. */
+.workspace-nav { display: flex; flex-wrap: wrap; gap: 8px; margin: -6px 0 20px; }
+.workspace-nav a { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 9px 14px; border: 1px solid var(--line); border-radius: 7px; background: var(--paper); color: var(--forest); font-size: .8125rem; font-weight: 600; }
+.workspace-nav a:hover { border-color: #8a9e8c; background: #edf2e9; }
+.ssu-workspace-note { display: flex; align-items: flex-start; gap: 10px; padding: 14px 18px; margin-bottom: 24px; border-left: 3px solid #bba263; border-radius: 0 7px 7px 0; background: #ecefe4; color: #405645; font-size: .8125rem; line-height: 1.7; }
+.ssu-workspace-note svg { margin-top: 2px; }
+.report-format { padding: 5px 9px; border: 1px solid var(--line); border-radius: 5px; background: var(--cream); color: var(--muted); font-size: .7rem; font-weight: 700; letter-spacing: .06em; }
+.ssu-report-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.ssu-report-card { display: flex; align-items: flex-start; gap: 14px; padding: 20px; border: 1px solid #d9e2d3; border-radius: 9px; background: #f5f7f0; color: var(--forest); text-align: left; }
+.ssu-report-card > svg { margin-top: 2px; }
+.ssu-report-card > span { display: flex; flex: 1; flex-direction: column; align-self: stretch; min-width: 0; }
+.ssu-report-card strong { font-size: .9375rem; line-height: 1.5; }
+.ssu-report-card small { display: block; margin: 6px 0 18px; color: #526452; font-size: .8125rem; line-height: 1.65; }
+.report-download { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; font-size: .75rem; font-weight: 700; }
+.ssu-report-card:hover:not(:disabled) { border-color: #7b987b; background: #edf2e6; }
+.ssu-report-card:disabled .report-download { cursor: wait; }
+@media (max-width: 1100px) { .ssu-report-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 480px) {
+  .workspace-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .workspace-nav a { padding-inline: 10px; font-size: .75rem; }
+  .ssu-report-card { padding: 17px; }
+}
