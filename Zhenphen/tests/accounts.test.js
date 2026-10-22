@@ -247,3 +247,23 @@ test('SMTP failure responses do not contain provider details, credentials or raw
     if (token) assert.ok(!response.includes(token));
   }
 });
+
+test('new accounts require a capital, number and special character before any database write', async t => {
+  const db = database(() => empty());
+  const request = await serve(t, [['/api', api(db)]]);
+  for (const password of ['lowercase123!', 'NoNumbersHere!', 'NoSpecialChar123', 'NoSpecial123 ']) {
+    const result = await request('/api/auth/register', { ...signup, password });
+    assert.equal(result.status, 400);
+    assert.match(result.body.error, /capital letter, one number, and one special character/);
+  }
+  assert.equal(db.calls.length, 0);
+});
+
+test('existing accounts can still sign in with passwords that lack the new requirements', async t => {
+  const password = 'oldpassword';
+  const bcrypt = require('bcryptjs');
+  const passwordHash = await bcrypt.hash(password, 4);
+  const db = database(() => rows({ id: 1, ...signup, email_verified: true, password_hash: passwordHash }));
+  const request = await serve(t, [['/api', api(db, undefined, bcrypt)]]);
+  assert.equal((await request('/api/auth/login', { email: signup.email, password })).status, 200);
+});

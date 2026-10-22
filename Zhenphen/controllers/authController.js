@@ -65,6 +65,9 @@ function createAuthController({ users, emailService, bcrypt = require('bcryptjs'
     if (memberType === 'Sherubtse College student' && !/^\d{8}\.sherubtse@rub\.edu\.bt$/.test(email)) {
       throw httpError(400, 'Sherubtse students must use an email with 8 digits followed by .sherubtse@rub.edu.bt.');
     }
+    if (!/[A-Z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9\s]/.test(password)) {
+      throw httpError(400, 'Your password must include at least one capital letter, one number, and one special character.');
+    }
     const mailConfig = emailService.configure();
     const role = memberType === 'Sherubtse College student' ? 'student' : 'supporter';
     const passwordHash = await bcrypt.hash(password, 12);
