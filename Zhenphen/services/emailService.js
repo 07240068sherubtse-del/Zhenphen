@@ -120,4 +120,4 @@ If you did not request a password reset, you can ignore this email.`,
   };
 }
 
-module.exports = { createEmailService };s
+module.exports = { createEmailService };
