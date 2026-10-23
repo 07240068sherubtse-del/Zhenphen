@@ -439,10 +439,6 @@ async function bootLiveApp() {
     loginPassword.placeholder = 'Enter your password';
     loginPassword.autocomplete = 'current-password';
   }
-  const signoutHeading = [...document.querySelectorAll('h2')].find(heading => heading.textContent.includes('Sign out of your demo session'));
-  if (signoutHeading) signoutHeading.textContent = 'Sign out of your account?';
-  const signoutCopy = signoutHeading?.nextElementSibling;
-  if (signoutCopy) signoutCopy.textContent = 'This will end your secure server session on this browser.';
   const emailField = document.querySelector('form[data-form="profile"] input[name="email"]');
   if (emailField) {
     emailField.readOnly = true;
