@@ -126,3 +126,7 @@ Run `npm run check` and `npm test -- --runInBand` from the app folder in VS Code
 ## SSU CSV reports
 
 In the SSU administrator dashboard, use Download SSU reports to export volunteer totals, member activity, or event totals. Each export fetches fresh records from the existing administrator-only overview API. Totals distinguish unique registered volunteers, event registrations, applications, recorded attendance, current volunteer work, and open events. Member CSV includes names/emails and should be shared only with authorized staff. These exports exclude financial records. Per-event attendance exports remain available.
+
+## Shared SSU and Zhenphen work management
+
+Super Admin and SSU Admin can create, edit, and delete the same joint activities, including records created by the other administrator. Super Admin uses Add joint activity and the row Edit/Delete controls in Joint community work; SSU Admin uses the existing publish form and the same Edit/Delete actions in activity cards. API responses consistently identify Social Services Unit in collaboration with Zhenphen Association. Editing supports title, date, location, description, capacity, sign-up status, and work status. The editor prevents reducing capacity below existing registrations. Deletion asks for confirmation and removes related registrations/attendance through the existing database cascade. Site-wide role and account administration remains exclusive to Super Admin.

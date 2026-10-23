@@ -91,3 +91,40 @@ test('site admin endpoints reject SSU administrators and prevent self-demotion',
   assert.equal((await admin('/admin/users/2/role', { role: 'unknown' }, 'PUT')).status, 400);
   assert.equal((await admin('/admin/users/2/role', { role: 'supporter' }, 'PUT')).status, 200);
 });
+
+test('work edit and delete reject anonymous, student and supporter accounts before database access', async t => {
+  const db = database(() => { throw new Error('Unexpected database access'); });
+  for (const user of [null, { id: '1', role: 'student' }, { id: '2', role: 'supporter' }]) {
+    const request = await serve(t, [['/ssu', router(db)]], user);
+    const status = user ? 403 : 401;
+    assert.equal((await request('/ssu/events/1', {}, 'PATCH')).status, status);
+    assert.equal((await request('/ssu/events/1', {}, 'DELETE')).status, status);
+  }
+  assert.equal(db.calls.length, 0);
+});
+
+test('both administrators can edit and delete shared work while preserving registration capacity', async t => {
+  let exists = true;
+  const db = database(sql => {
+    if (sql.includes('COUNT(*)')) return rows({ count: 3 });
+    if (sql.includes('SELECT id FROM ssu_events')) return exists ? rows({ id: '12' }) : empty();
+    return exists ? rows({ id: '12' }) : empty();
+  });
+  const body = { title: 'Joint painting', date: '2026-09-03', location: 'Lower Zangtolperi', description: 'SSU and Zhenphen collaboration', capacity: 5, status: 'Closed', workStatus: 'Completed' };
+  for (const role of ['admin', 'ssuAdmin']) {
+    const request = await serve(t, [['/ssu', router(db)]], { id: '4', role });
+    const result = await request('/ssu/events/12', body, 'PATCH');
+    assert.equal(result.status, 200);
+    assert.equal(result.body.event.organizers, 'Social Services Unit, in collaboration with Zhenphen Association');
+    assert.ok(db.calls.some(call => call.sql.includes('FOR UPDATE')));
+    assert.equal((await request('/ssu/events/12', { ...body, capacity: 2 }, 'PATCH')).status, 409);
+    assert.equal((await request('/ssu/events/12', { ...body, date: '2026-02-30' }, 'PATCH')).status, 400);
+    assert.equal((await request('/ssu/events/12', { ...body, status: 'Invalid' }, 'PATCH')).status, 400);
+    assert.equal((await request('/ssu/events/invalid', body, 'PATCH')).status, 400);
+    assert.equal((await request('/ssu/events/12', {}, 'DELETE')).status, 204);
+    exists = false;
+    assert.equal((await request('/ssu/events/12', body, 'PATCH')).status, 404);
+    assert.equal((await request('/ssu/events/12', {}, 'DELETE')).status, 404);
+    exists = true;
+  }
+});

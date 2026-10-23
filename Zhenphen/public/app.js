@@ -12,7 +12,8 @@
     'js/data.js',
     'js/pages/public.js',
     'js/pages/member.js',
-    'js/interactions.js'
+    'js/interactions.js',
+    'js/work-management.js'
   ];
   const dashboardScript = {
     'student-dashboard': 'js/dashboards/student.js',

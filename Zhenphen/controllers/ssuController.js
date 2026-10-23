@@ -1,5 +1,6 @@
 const { pool } = require('../db');
 const { httpError } = require('../middleware/api');
+const organizers = 'Social Services Unit, in collaboration with Zhenphen Association';
 
 function clean(value, maxLength) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
@@ -18,7 +19,7 @@ exports.listEvents = async (req, res) => {
      GROUP BY e.id ORDER BY e.event_date ASC`,
     [req.user?.id || null]
   );
-  res.json({ events: result.rows });
+  res.json({ events: result.rows.map(event => ({ ...event, organizers })) });
 };
 
 exports.createEvent = async (req, res) => {
@@ -41,7 +42,46 @@ exports.createEvent = async (req, res) => {
                status, work_status AS "workStatus", created_at AS "createdAt"`,
     [title, date, location, description, capacity, req.user.id]
   );
-  res.status(201).json({ event: result.rows[0] });
+  res.status(201).json({ event: { ...result.rows[0], organizers } });
+};
+
+exports.editEvent = async (req, res) => {
+  const title = clean(req.body.title, 140);
+  const date = clean(req.body.date, 10);
+  const location = clean(req.body.location, 180);
+  const description = clean(req.body.description, 500);
+  const capacity = req.body.capacity === '' || req.body.capacity == null ? null : Number(req.body.capacity);
+  const status = req.body.status;
+  const workStatus = req.body.workStatus;
+  const parsed = /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T00:00:00Z`) : null;
+  if (title.length < 2 || !parsed || Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date ||
+      !location || !description || (capacity !== null && (!Number.isInteger(capacity) || capacity < 1)) ||
+      !['Open', 'Closed'].includes(status) || !['Upcoming', 'In progress', 'Completed'].includes(workStatus)) {
+    throw httpError(400, 'Enter valid work details, date, participant limit, sign-up status and work status.');
+  }
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const existing = await client.query('SELECT id FROM ssu_events WHERE id = $1 FOR UPDATE', [req.params.eventId]);
+    if (!existing.rows.length) throw httpError(404, 'This joint activity could not be found.');
+    const registered = await client.query('SELECT COUNT(*)::integer AS count FROM ssu_registrations WHERE event_id = $1', [req.params.eventId]);
+    if (capacity !== null && capacity < registered.rows[0].count) throw httpError(409, 'The participant limit cannot be lower than the number already registered.');
+    const result = await client.query(`UPDATE ssu_events SET title = $1, event_date = $2::date,
+      location = $3, description = $4, capacity = $5, status = $6, work_status = $7 WHERE id = $8
+      RETURNING id::text, title, event_date::text AS date, location, description, capacity, status, work_status AS "workStatus"`,
+    [title, date, location, description, capacity, status, workStatus, req.params.eventId]);
+    await client.query('COMMIT');
+    res.json({ event: { ...result.rows[0], organizers } });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally { client.release(); }
+};
+
+exports.deleteEvent = async (req, res) => {
+  const result = await pool.query('DELETE FROM ssu_events WHERE id = $1 RETURNING id', [req.params.eventId]);
+  if (!result.rows.length) throw httpError(404, 'This joint activity could not be found.');
+  res.status(204).end();
 };
 
 exports.registerForEvent = async (req, res) => {
@@ -161,5 +201,5 @@ exports.getAdminOverview = async (req, res) => {
               (SELECT COUNT(*)::integer FROM ssu_events WHERE status = 'Open' AND event_date >= (NOW() AT TIME ZONE 'Asia/Thimphu')::date AND work_status = 'Upcoming') AS "openEvents"`
     )
   ]);
-  res.json({ events: events.rows, members: members.rows, metrics: counts.rows[0] });
+  res.json({ events: events.rows.map(event => ({ ...event, organizers })), members: members.rows, metrics: counts.rows[0] });
 };

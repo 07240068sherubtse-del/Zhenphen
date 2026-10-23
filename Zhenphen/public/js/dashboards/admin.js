@@ -44,10 +44,10 @@ window.ZhenphenDashboardPages.admin = function () {
             <div class="feedback-inbox" data-feedback-inbox aria-live="polite">Loading messages...</div>
           </section>
           <section class="dash-panel super-admin-panel">
-            <div class="panel-heading"><div><h2>SSU work attendance</h2><p>See how many members attended each joint activity and export the registration and attendance details.</p></div>${icon('download', 21)}</div>
+            <div class="panel-heading"><div><h2>Joint community work</h2><p>Social Services Unit in collaboration with Zhenphen Association. Add, edit, delete and report on shared activities.</p></div><button type="button" class="btn small" data-joint-work-add>Add joint activity</button></div>
             <p class="form-error" data-admin-ssu-error role="alert" hidden></p>
             <div class="table-scroll" tabindex="0" aria-label="SSU work attendance reports">
-              <table><thead><tr><th>Work</th><th>Date</th><th>Registered</th><th>Showed up</th><th>Work status</th><th>Report</th></tr></thead>
+              <table><thead><tr><th>Work</th><th>Date</th><th>Registered</th><th>Showed up</th><th>Work status</th><th>Manage work</th></tr></thead>
                 <tbody data-admin-ssu-reports><tr><td colspan="6">Loading attendance…</td></tr></tbody>
               </table>
             </div>
@@ -132,12 +132,12 @@ async function refreshSuperAdminDashboard() {
 function renderSuperAdminSsuReports(events) {
   if (!events.length) return '<tr><td colspan="6">No SSU work has been published yet.</td></tr>';
   return events.map(event => `<tr>
-    <td><strong>${esc(event.title)}</strong><small>${esc(event.location)}</small></td>
+    <td><strong class="joint-work-title">${esc(event.title)}</strong><small class="joint-work-location">${esc(event.location)}</small><small class="joint-work-collaboration">SSU in collaboration with Zhenphen Association</small></td>
     <td>${esc(event.date)}</td>
     <td>${event.registrationCount}</td>
     <td><strong>${event.attendedCount}</strong></td>
     <td>${esc(event.workStatus)}</td>
-    <td><button type="button" class="btn outline small" data-ssu-export="${esc(event.id)}">Export CSV</button></td>
+    <td><div class="joint-work-actions"><button type="button" class="btn outline small" data-joint-work-edit="${esc(event.id)}">Edit</button><button type="button" class="btn outline small joint-work-delete" data-joint-work-delete="${esc(event.id)}">Delete</button><button type="button" class="btn outline small" data-ssu-export="${esc(event.id)}">Export CSV</button></div></td>
   </tr>`).join('');
 }
 

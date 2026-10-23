@@ -719,6 +719,7 @@ document.addEventListener('submit', event => {
   const form = event.target;
   if (!(form instanceof HTMLFormElement)) return;
   if (form.hasAttribute('data-evidence-upload')) return;
+  if (form.hasAttribute('data-joint-work-form')) return;
   if (form.dataset.form?.startsWith('super-admin-')) return;
   if (form.dataset.submitting === 'true') { event.preventDefault(); event.stopImmediatePropagation(); return; }
   form.dataset.submitting = 'true';
