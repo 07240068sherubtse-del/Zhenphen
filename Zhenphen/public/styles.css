@@ -347,3 +347,10 @@ body[data-page="logout"] .page-main{background:radial-gradient(ellipse at 90% 20
 .logout-community-link:hover{color:#193d33;text-decoration:underline}
 .logout-community-link:focus-visible{outline:2px solid #b99b5f;outline-offset:6px;border-radius:3px}
 @media(max-width:767px){.logout-scene{padding:42px 0 52px;min-height:0}.logout-layout{grid-template-columns:1fr;gap:32px;max-width:520px}.logout-message h1{font-size:clamp(2.4rem,8vw,3.1rem);margin:18px 0}.logout-message>p{font-size:.9rem}.logout-community-note{margin-top:22px}.logout-card{padding:28px 24px;border-radius:18px}.logout-card h2{font-size:1.9rem}.logout-symbol{width:52px;height:52px;margin-bottom:22px}}
+/* Donation-page-only preview: retain the original layout and full contrast. */
+body[data-page="donation"] .donation-preview-notice{padding:12px 15px;margin:0 0 24px;background:#eef2e8;border:1px solid #d7e0ce;border-left:3px solid #668354;border-radius:7px;color:#31513e;font-size:.82rem;line-height:1.65}
+body[data-page="donation"] [data-donation-preview]>p{max-width:50ch;margin-top:4px}
+body[data-page="donation"] [data-donation-preview] :disabled{opacity:1;cursor:not-allowed}
+body[data-page="donation"] [data-donation-preview] input:disabled,body[data-page="donation"] [data-donation-preview] select:disabled,body[data-page="donation"] [data-donation-preview] textarea:disabled{color:var(--ink);-webkit-text-fill-color:var(--ink)}
+body[data-page="donation"] [data-donation-preview] .btn:disabled:hover{background:var(--forest);box-shadow:0 6px 16px #102a231c;transform:none}
+@media(max-width:600px){body[data-page="donation"] .donation-preview-notice{padding:12px 13px;font-size:.78rem}}

@@ -2,30 +2,28 @@ const donationPreviewNotice = 'Preview only \u2014 donations are not available y
 
 function donationDisplayPreview(markup) {
   return markup
-    .replace(/<form data-form="(money|clothes)">/g, (_, type) => `<div data-donation-preview="${type}" aria-disabled="true"><p class="donation-preview-notice" role="note">${donationPreviewNotice}</p>`)
+    .replace('<div class="panel">', `<div class="panel"><p class="donation-preview-notice" role="note">${donationPreviewNotice}</p>`)
+    .replace(/<form data-form="(money|clothes)">/g, (_, type) => `<div data-donation-preview="${type}" aria-disabled="true">`)
     .replace(/<\/form>/g, '</div>')
-    .replace(/<(input|select|textarea|button)\b([^>]*)>/g, (_, tag, attributes) => {
-      const passive = attributes.replace(/\s(?:name|data-form|data-tab|data-amount|tabindex|aria-selected|aria-pressed)="[^"]*"/g, '');
+    .replace(/<(input|select|textarea|button)\b([^>]*)>/g, (original, tag, attributes) => {
+      if (/role="tab"/.test(attributes)) return original;
+      const passive = attributes.replace(/\s(?:name|data-form|data-amount|tabindex)="[^"]*"/g, '');
       return `<${tag}${passive}${/\sdisabled(?:\s|$)/.test(passive) ? '' : ' disabled'} tabindex="-1">`;
     })
-    .replace(/role="tablist"/g, 'role="group" data-donation-tabs')
-    .replace(/\srole="tab"/g, '')
-    .replace(/role="tabpanel"/g, 'role="region"')
-    .replace(/(id="(?:money|clothes)-panel"[^>]*?)\shidden/g, '$1')
-    .replace(/(class="custom-amount field")\shidden/g, '$1')
-    .replace('Financial and clothing forms below are interactive previews. A secure payment and handover service is not connected.', 'Financial and clothing donations are display-only previews. All donation controls are disabled.')
-    .replace('Choose an amount and enter the details for your demo history.', 'Preview the financial donation options below. Donations are not available yet.')
-    .replace('Tell us what you would like to contribute.', 'Preview the clothing donation options below. Item donations are not available yet.')
-    .replace('Choose an amount and preview how a contribution would be recorded.', 'View a display-only preview of financial donation options.')
-    .replace('Register clean, wearable clothing or essentials for the demo.', 'View a display-only preview of clothing and essential items.')
-    .replace('href="clothd.html"', 'href="#clothes-panel"');
+    .replace(/<p class="form-note">[\s\S]*?<\/p>/g, '')
+    .replace('Financial and clothing forms below are interactive previews. A secure payment and handover service is not connected.', 'Explore the financial and clothing donation options below.')
+    .replace('Choose an amount and enter the details for your demo history.', 'Financial giving options for supporting community work.')
+    .replace('Tell us what you would like to contribute.', 'Clothing and essential items that can help the community.')
+    .replace('Choose an amount and preview how a contribution would be recorded.', 'Explore financial giving options for community support.')
+    .replace('Register clean, wearable clothing or essentials for the demo.', 'Explore clothing and essential items for the community.')
+    .replace('href="clothd.html"', 'href="#giving-options"');
 }
 
 // Native disabled controls are the first barrier; stop synthetic events too.
 for (const type of ['click', 'keydown', 'input', 'change', 'submit']) {
   document.addEventListener(type, event => {
     if (document.body.dataset.page !== 'donation') return;
-    if (!event.target.closest('[data-donation-preview], [data-donation-tabs]')) return;
+    if (!event.target.closest('[data-donation-preview]')) return;
     event.preventDefault();
     event.stopImmediatePropagation();
   }, true);
