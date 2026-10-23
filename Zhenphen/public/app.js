@@ -15,6 +15,7 @@
     'js/interactions.js',
     'js/work-management.js'
   ];
+  if (page === 'donation') scripts.splice(2, 0, 'js/donation-preview.js');
   const dashboardScript = {
     'student-dashboard': 'js/dashboards/student.js',
     'supporter-dashboard': 'js/dashboards/supporter.js',

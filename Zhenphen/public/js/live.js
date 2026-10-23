@@ -321,6 +321,10 @@ async function loadMemberData() {
 }
 
 async function bootLiveApp() {
+  if (document.body.dataset.page === 'donation') {
+    render();
+    return;
+  }
   store.set('signed', false);
   store.remove('member');
   let user = null;
@@ -566,6 +570,7 @@ async function submitLiveForm(form, event) {
   if (!['login', 'join', 'profile', 'ssu-event', 'volunteer', 'money', 'clothes', 'ration', 'rations', 'contact', 'reset', 'reset-confirm', 'verify-email', 'resend-verification'].includes(type)) return;
   event.preventDefault();
   event.stopImmediatePropagation();
+  if (document.body.dataset.page === 'donation' && ['money', 'clothes'].includes(type)) return;
   const values = Object.fromEntries(new FormData(form));
   form.querySelector('.form-error')?.setAttribute('hidden', '');
 
