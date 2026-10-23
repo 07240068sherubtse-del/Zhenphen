@@ -105,3 +105,21 @@ CREATE TABLE IF NOT EXISTS feedback_messages (
 );
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_attempts INTEGER NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS project_evidence (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  project_key VARCHAR(100) NOT NULL,
+  kind VARCHAR(10) NOT NULL CHECK (kind IN ('photo', 'receipt')),
+  filename VARCHAR(160) NOT NULL,
+  caption VARCHAR(300) NOT NULL DEFAULT '',
+  mime_type VARCHAR(40) NOT NULL CHECK (mime_type IN ('image/jpeg', 'image/png', 'application/pdf')),
+  content BYTEA NOT NULL CHECK (octet_length(content) BETWEEN 1 AND 1048576),
+  uploaded_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS project_evidence_project_idx ON project_evidence(project_key, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS project_evidence_imports (
+  source_key VARCHAR(64) PRIMARY KEY,
+  imported_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

@@ -68,6 +68,7 @@ app.use('/api', async (req, res, next) => {
 app.use('/api', apiRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ssu', ssuRoutes);
+app.use('/api/evidence', require('./routes/evidence').createEvidenceRouter(pool));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', require('./routes'));
 

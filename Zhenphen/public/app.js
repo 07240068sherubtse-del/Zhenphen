@@ -22,7 +22,7 @@
   }[page];
 
   if (dashboardScript) scripts.push(dashboardScript);
-  scripts.push('js/site.js', 'js/live.js');
+  scripts.push('js/site.js', 'js/evidence.js', 'js/live.js');
   let index = 0;
   const loadNext = () => {
     if (index === scripts.length) return;

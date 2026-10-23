@@ -354,6 +354,7 @@ async function bootLiveApp() {
   }
 
   render();
+  if (user) void mountProjectEvidence();
   if (sessionUnavailable) {
     const notice = document.createElement('p');
     notice.className = 'form-error';
@@ -717,6 +718,7 @@ async function submitLiveForm(form, event) {
 document.addEventListener('submit', event => {
   const form = event.target;
   if (!(form instanceof HTMLFormElement)) return;
+  if (form.hasAttribute('data-evidence-upload')) return;
   if (form.dataset.form?.startsWith('super-admin-')) return;
   if (form.dataset.submitting === 'true') { event.preventDefault(); event.stopImmediatePropagation(); return; }
   form.dataset.submitting = 'true';
