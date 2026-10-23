@@ -1,0 +1,85 @@
+{
+  "source": "evidence.docx",
+  "sourceSha256": "cbd8c930ff42ae6ed0893bbc11a0d7ae9b2282719c9f8df7bd47b07a195c5d65",
+  "projectKey": "lower-zangtolperi-108-chorten",
+  "files": [
+    {
+      "filename": "completed-work-01.jpg",
+      "kind": "photo",
+      "caption": "Completed painted chortens at Lower Zangtolperi",
+      "sourceImage": "word/media/image1.jpg"
+    },
+    {
+      "filename": "completed-work-02.jpg",
+      "kind": "photo",
+      "caption": "Completed chorten ? close view",
+      "sourceImage": "word/media/image2.jpg"
+    },
+    {
+      "filename": "completed-work-03.jpg",
+      "kind": "photo",
+      "caption": "Completed painted chortens ? evening view",
+      "sourceImage": "word/media/image3.jpg"
+    },
+    {
+      "filename": "bill-01.jpg",
+      "kind": "receipt",
+      "caption": "Bill / receipt ? document 1",
+      "sourceImage": "word/media/image4.jpg"
+    },
+    {
+      "filename": "bill-02.jpg",
+      "kind": "receipt",
+      "caption": "Bill / receipt ? document 2",
+      "sourceImage": "word/media/image5.jpg"
+    },
+    {
+      "filename": "bill-03.jpg",
+      "kind": "receipt",
+      "caption": "Bill / receipt ? document 3",
+      "sourceImage": "word/media/image6.jpg"
+    },
+    {
+      "filename": "bill-04.jpg",
+      "kind": "receipt",
+      "caption": "Bill / receipt ? document 4",
+      "sourceImage": "word/media/image7.jpg"
+    },
+    {
+      "filename": "bill-05.jpg",
+      "kind": "receipt",
+      "caption": "Bill / receipt ? document 5",
+      "sourceImage": "word/media/image8.jpg"
+    },
+    {
+      "filename": "bill-06.jpg",
+      "kind": "receipt",
+      "caption": "Bill / receipt ? document 6",
+      "sourceImage": "word/media/image9.jpg"
+    },
+    {
+      "filename": "bill-07.jpg",
+      "kind": "receipt",
+      "caption": "Bill / receipt ? document 7",
+      "sourceImage": "word/media/image10.jpg"
+    },
+    {
+      "filename": "bill-08.jpg",
+      "kind": "receipt",
+      "caption": "Bill / receipt ? document 8",
+      "sourceImage": "word/media/image11.jpg"
+    },
+    {
+      "filename": "bill-09.jpg",
+      "kind": "receipt",
+      "caption": "Credit note (sales return) ? document 9",
+      "sourceImage": "word/media/image12.jpg"
+    },
+    {
+      "filename": "bill-10.jpg",
+      "kind": "receipt",
+      "caption": "Bill / receipt ? document 10",
+      "sourceImage": "word/media/image13.jpg"
+    }
+  ]
+}
