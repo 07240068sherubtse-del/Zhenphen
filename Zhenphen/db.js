@@ -19,6 +19,7 @@ const pool = new Pool({
 async function initializeDatabase() {
   const schema = fs.readFileSync(path.join(__dirname, 'migrations', '001_initial.sql'), 'utf8');
   await pool.query(schema);
+  await require('./services/projectEvidence').importProvidedEvidence(pool);
 }
 
 module.exports = { pool, initializeDatabase };

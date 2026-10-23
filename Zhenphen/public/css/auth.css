@@ -391,6 +391,67 @@ body[data-page="forgot"] .form-note svg { flex-shrink: 0; }
 /* Keep long account messages and narrow-screen controls inside the card. */
 .auth-card { overflow-wrap: anywhere; }
 .auth-card .password-control input { padding-right: 76px; }
+.auth-card .password-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px;
+  align-items: center;
+  min-width: 0;
+}
+.auth-card .password-control input {
+  grid-area: 1 / 1 / 2 / -1;
+  width: 100%;
+  min-width: 0;
+}
+.auth-card .password-toggle {
+  position: relative;
+  inset: auto;
+  grid-area: 1 / 2;
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  min-width: 0;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 8px;
+  line-height: 1;
+}
+.auth-card .field select {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  min-width: 0;
+  padding: 13px 44px 13px 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23315342' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  background-size: 16px;
+  cursor: pointer;
+}
+body[data-page="join"] .auth-card {
+  max-width: 560px;
+  border-top-width: 3px;
+  padding: clamp(28px, 3.2vw, 44px);
+  border-radius: 20px;
+  box-shadow: 0 20px 64px #193d3310;
+}
+body[data-page="join"] .auth-card h1 {
+  font-size: clamp(2rem, 3vw, 2.65rem);
+  line-height: 1.12;
+  letter-spacing: -.045em;
+}
+body[data-page="join"] .auth-card > p { margin: 14px 0 28px; }
+body[data-page="join"] .auth-card .field input,
+body[data-page="join"] .auth-card .field select { min-height: 54px; font-size: .94rem; }
+body[data-page="join"] .auth-card .field-help { display: block; margin-top: 9px; font-size: .75rem; line-height: 1.65; }
+body[data-page="join"] .join-email-help { padding: 12px 14px; border-radius: 8px; font-size: .76rem; }
+body[data-page="join"] .auth-card .form-foot { margin-top: 24px; padding-top: 22px; }
+body[data-page="join"] .auth-card .form-foot .btn { min-height: 52px; font-size: .92rem; }
+body[data-page="join"] .auth-card .auth-bottom { margin-top: 22px; line-height: 1.7; }
+@media (forced-colors: active) {
+  .auth-card .field select { appearance: auto; background-image: none; }
+}
 @media (max-width: 480px) {
   .auth-card .field input,
   .auth-card .field select,

@@ -405,7 +405,7 @@ async function bootLiveApp() {
     joinForm.elements.password.maxLength = 128;
     joinForm.elements.password.pattern = '(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9\\s]).{12,128}';
     joinForm.elements.password.title = 'Use at least 12 characters, including a capital letter, a number, and a special character.';
-    joinForm.elements.password.insertAdjacentHTML('afterend', '<small class="field-help">Use at least 12 characters with a capital letter, a number, and a special character (for example, !, @, or #).</small>');
+    joinForm.elements.password.closest('.password-control').insertAdjacentHTML('afterend', '<small class="field-help">Use at least 12 characters with a capital letter, a number, and a special character (for example, !, @, or #).</small>');
     joinForm.elements.password.autocomplete = 'new-password';
     joinForm.querySelector('button[type="submit"]').textContent = 'Create account';
     const formNote = joinForm.querySelector('.form-note');

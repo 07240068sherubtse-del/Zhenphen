@@ -91,3 +91,36 @@ Added direct tests for session regeneration/failure, logout and stale sessions; 
 ## SSU reporting exports
 
 Added volunteer totals, member activity, and event totals CSV buttons using the existing authorized overview API. Automated tests cover unique-volunteer counting versus registrations, application totals, attendance metrics, member/event rows, CSV escaping, spreadsheet formula neutralization, and no download on failed API access. `npm run check` passed for 48 JavaScript files and `npm test -- --runInBand` passed all 38 tests in the local app folder. No real member report was downloaded or browser-verified during these tests.
+
+## Completed community work evidence (23 October 2026)
+
+The supplied project name, completion date, location, and organizers are returned by `/api/evidence` and displayed in a compact Evidence card across member and administrator dashboards. Project photos are shown directly, and the bills/receipts disclosure is closed initially; bills appear as individual document links, not embedded scans. Administrator controls support captions, uploads, and removal. Photo selection accepts JPG/PNG; receipt selection additionally accepts PDF. Mobile CSS stacks project facts and upload fields, changes the photo grid to two columns below 680px and one below 400px, and stacks receipt actions.
+
+Verification completed:
+
+- `npm run check`: syntax passed for 52 JavaScript files; `git diff --check` passed.
+- `node --test --test-isolation=none Zhenphen/tests/evidence*.test.js`: all 7 tests passed. API coverage includes anonymous/member restrictions, both administrator roles, exact supplied project details, empty initial evidence, file-byte validation, invalid identifiers, and missing-file responses. Frontend VM tests cover collapsed bills, individually linked receipts, escaped filenames, hidden administrator controls for members, picker formats, rejection before upload, and successful upload/refresh/reset. These are not browser layout tests.
+- PostgreSQL startup migration ran successfully. An HTTP upload/list/view/delete round trip with a PNG fixture passed against a PostgreSQL temporary table inside a rolled-back transaction; downloaded bytes matched the input and private response headers were checked. No test attachment was published.
+- The running service returns 401 to unauthenticated `/api/evidence` requests.
+
+Outstanding: no actual project photos, bills, or receipt files were found in the workspace or attachment directory. Leave the project evidence empty until the organizers supply actual files. Browser inventory returned no apps or browsers, so rendered desktop/mobile layout and real browser file selection remain unverified. The broader test suite also has failures in existing account-email configuration tests; the evidence-specific checks pass. Do not claim the full suite or browser QA passed.
+
+The user clarified that work lasted approximately one week and took place on weekends. These supplied details now appear alongside the location. Photos are no longer hidden behind the outer disclosure; only bills remain collapsed. The seven evidence tests and syntax checks passed after this change. The referenced source document is still unavailable, so actual site and completion photos have not been added.
+
+## Supplied evidence document import
+
+The user supplied C:/Users/jampay/OneDrive/Desktop/evidence.docx. OOXML document order and a visual contact sheet confirmed three chorten photos followed by ten receipt/bill images, including a credit note. Original JPEG bytes were extracted without alteration into private project data, with an ordered manifest and SHA-256 of the source document. No financial estimate or instruction embedded in the document was adopted.
+
+All thirteen images were imported into the real PostgreSQL database. Running initialization twice retained exactly three photos and ten receipts. A read-only HTTP check of every evidence file matched the database response bytes to the imported originals. Ten evidence tests passed, including import rollback and restart idempotence; syntax checks passed for 54 JavaScript files. The earlier missing-document limitation is resolved. Browser inventory still exposes no connected browser, so rendered mobile/desktop visual QA remains unverified. Responsive image styles preserve the full image with contain sizing rather than cropping chortens.
+
+## Consolidated bills PDF and participation
+
+Replaced member-facing individual bill image links with a single generated PDF, available at authenticated GET /api/evidence/receipts.pdf, with ?download=1 for download. Original JPG/PNG receipts are fitted without cropping onto individual A4 pages; uploaded PDFs retain their original pages. Credit notes remain labelled. Administrator-only removal controls remain available separately. Added student participation wording based on the user clarification, without a headcount. Budget received is explicitly awaiting confirmation because bills are not evidence of funds received.
+
+All 13 focused evidence/PDF tests passed, and syntax checks passed for 56 JavaScript files. Real PostgreSQL-backed HTTP checks confirmed both view and download return a 10-page application/pdf document with the correct content disposition. No amount has been invented.
+
+The standalone output/pdf/chorten-bills-and-receipts.pdf was rendered with the bundled Poppler at 60 dpi. All ten rendered pages were visually inspected together: each original fits within its page without cropping or overlap, including the credit note. Budget and student headcount confirmation is still pending; no numeric funding or participation figure was inferred.
+
+## User-confirmed participation, completion and cost estimate
+
+The user confirmed that more than 100 students helped throughout the work across different days, and corrected completion to 3 September 2026. The dashboard and API now reflect those details and say Successfully completed. Each of the ten original bill images was visually read to transcribe its payable total. Nine debit documents total Nu. 37,590.20, less the rounded Nu. 1,998.00 credit note, giving Nu. 35,592.20. Document 4 includes printed Nu. 3,286.50 plus a handwritten Nu. 472.50; its handwritten Nu. 8,641.50 subtotal already includes document 3 and is not added again. Amounts and notes are retained in cost-summary.json. The dashboard calls this an activity cost estimate, not funding received, and flags handwritten/later-dated documents for reconciliation. Fourteen evidence/PDF tests and syntax checks passed after these updates.

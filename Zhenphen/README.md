@@ -4,6 +4,14 @@ Express/PostgreSQL community platform. The existing page layouts, styles, and as
 
 ## Feature status
 
+### Completed work evidence
+
+The student, supporter, site administrator, SSU administrator, and financial transparency dashboards include an Evidence card for **Painting of Lower Zangtolperi 108 Chorten**, completed **3 September 2026** at **Lower Zangtolperi 108 Chorten**, organized by **Social Services Unit, in collaboration with Zhenphen Association**. The supplied project details are separate from the illustrative financial ledger.
+
+Project photos appear directly in the card under **Work location & completed work**. The project duration is approximately one week, with work carried out on weekends. Bills and receipts stay behind a collapsed section with one combined PDF to view or download, keeping the dashboard compact. The PDF is generated from the current database files and includes future uploads. Original receipt files can be removed individually from administrator controls. The user confirmed more than 100 students participated across different days and clarified successful completion on 3 September 2026. The activity cost estimate is Nu. 35,592.20 from the supplied bills: Nu. 37,590.20 less a Nu. 1,998.00 credit note. The calculation is available in an expandable breakdown; it is not labelled as funding received. It includes the handwritten Nu. 472.50 addition and does not double count the Nu. 8,641.50 subtotal. Later-dated receipts and the handwritten adjustment remain flagged for reconciliation. Site and SSU administrators expand **Manage evidence** to upload actual JPG/PNG photos or JPG/PNG/PDF receipts (up to 1 MB each), add captions, and remove incorrect attachments. Uploads are available to signed-in members and are not automatically verified. The supplied evidence.docx contains three completed-work photographs followed by ten bill/receipt images. All thirteen originals are retained under private data/evidence storage and imported into PostgreSQL once during startup; deleted evidence stays deleted on subsequent restarts. One supplied document is a credit note and is labelled accordingly. No funding total is inferred from these documents.
+
+Files persist in PostgreSQL `project_evidence`; the existing startup migration creates the table. `/api/evidence` lists metadata, administrator-only POST saves validated bytes, `/:id/file` serves files to authenticated members, and administrator-only DELETE removes a file. Test fixtures must never be published as actual evidence.
+
 | Feature | Current implementation |
 | --- | --- |
 | Signup, verification, resend, login/logout | PostgreSQL accounts, bcrypt hashes, HTTP-only server sessions, SMTP verification codes. New accounts must verify before login. Existing accounts predating verification retain access. |
