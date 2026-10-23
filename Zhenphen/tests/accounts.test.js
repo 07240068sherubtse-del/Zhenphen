@@ -1,16 +1,15 @@
-const { test } = require('node:test');
+const { test, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const { load, serve, database, empty, rows } = require('./helpers.cjs');
+const { mailEnvironment, emailService, mailFetch, testMailSecret } = require('./email-helpers.cjs');
+beforeEach(t => mailEnvironment(t));
 
 const signup = { name: 'Test Student', email: '12345678.sherubtse@rub.edu.bt', password: 'TestPassword123!', memberType: 'Sherubtse College student', interest: 'Not applying for a volunteer role yet' };
 function api(db, sendMail = async () => {}, bcrypt = {}) {
   const { createAuthController } = require('../controllers/authController');
-  const { createEmailService } = load('services/emailService.js', {
-    '../config/runtime': { appBaseUrl: () => 'https://site.example.com' },
-    nodemailer: { createTransport: () => ({ sendMail }) }
-  });
+  const createEmailService = () => emailService(mailFetch(sendMail));
   return load('routes/api.js', {
     '../db': db,
     '../services/emailService': { createEmailService },
@@ -21,8 +20,7 @@ function api(db, sendMail = async () => {}, bcrypt = {}) {
     }
   });
 }
-// Harmless test-only configuration. No dotenv and no real transports.
-Object.assign(process.env, { EMAIL_SMTP_HOST: 'smtp.example.com', EMAIL_SMTP_USER: 'test', EMAIL_SMTP_PASSWORD: 'test', EMAIL_FROM: 'sender@example.com', EMAIL_SMTP_PORT: '587', SESSION_SECRET: 'test-only-session-secret-at-least-32-characters' });
+
 
 test('signup emails a six-digit code, stores keyed hash, embeds logo and commits', async t => {
   const db = database(sql => sql.includes('INSERT INTO users') ? rows({ id: 1, ...signup }) : empty());
@@ -31,10 +29,12 @@ test('signup emails a six-digit code, stores keyed hash, embeds logo and commits
   const result = await request('/api/auth/register', { ...signup, role: 'admin' });
   assert.equal(result.status, 201);
   assert.equal(mail.to, signup.email);
-  assert.equal(mail.from.name, 'Zhenphen');
-  assert.ok(mail.html.includes('cid:zhenphen-logo'));
-  assert.ok(fs.existsSync(mail.attachments[0].path));
-  const raw = mail.text.match(/code is: (\d{6})/)[1];
+  assert.equal(mail.secret, testMailSecret);
+  assert.ok(mail.htmlBody.includes('cid:zhenphen-logo'));
+  assert.equal(mail.attachments[0].contentType, 'image/png');
+  assert.equal(mail.attachments[0].cid, 'zhenphen-logo');
+  assert.deepEqual(Buffer.from(mail.attachments[0].content, 'base64'), fs.readFileSync(require('node:path').resolve(__dirname, '../public/assets/Zhenphen Association logo.png')));
+  const raw = mail.body.match(/code is: (\d{6})/)[1];
   const token = db.calls.find(c => c.sql.includes('INSERT INTO email_verification_tokens'));
   assert.equal(token.params[0], crypto.createHmac('sha256', process.env.SESSION_SECRET).update(`${signup.email}:${raw}`).digest('hex'));
   assert.equal(db.calls.find(c => c.sql.includes('INSERT INTO users')).params[3], 'student');
@@ -105,7 +105,7 @@ test('verification rejects expired codes and locks out accounts after five faile
 
 test('resend hides account existence and keeps the earlier code on delivery failure', async t => {
   const db = database((sql, params) => sql.startsWith('SELECT id, name, email') && params[0] === signup.email ? rows({ id: 1, ...signup }) : empty());
-  const request = await serve(t, [['/api', api(db, async () => { throw new Error('test SMTP failure'); })]]);
+  const request = await serve(t, [['/api', api(db, async () => { throw new Error('test Apps Script delivery failure'); })]]);
   assert.equal((await request('/api/auth/verification/resend', { email: 'unknown@example.com' })).status, 202);
   assert.equal((await request('/api/auth/verification/resend', { email: signup.email })).status, 503);
   assert.ok(!db.calls.some(c => c.sql.includes('DELETE FROM email_verification_tokens WHERE user_id')));
@@ -127,7 +127,7 @@ test('login blocks unverified accounts and wrong passwords', async t => {
 
 test('password recovery hides unknown account and does not delete old links when send fails', async t => {
   const db = database((sql, params) => sql.startsWith('SELECT id, name, email') && params[0] === signup.email ? rows({ id: 1, ...signup }) : empty());
-  const request = await serve(t, [['/api', api(db, async () => { throw new Error('test SMTP failure'); })]]);
+  const request = await serve(t, [['/api', api(db, async () => { throw new Error('test Apps Script delivery failure'); })]]);
   assert.equal((await request('/api/auth/password-reset/request', { email: 'unknown@example.com' })).status, 202);
   assert.equal((await request('/api/auth/password-reset/request', { email: signup.email })).status, 503);
   assert.ok(!db.calls.some(c => c.sql === 'DELETE FROM password_reset_tokens WHERE user_id = $1'));
@@ -139,8 +139,8 @@ test('password recovery sends a correctly addressed code and stores only its has
   const request = await serve(t, [['/api', api(db, async value => { mail = value; })]]);
   assert.equal((await request('/api/auth/password-reset/request', { email: signup.email })).status, 202);
   assert.equal(mail.to, signup.email);
-  const code = mail.text.match(/\b\d{6}\b/)[0];
-  assert.ok(!mail.text.includes('https://'));
+  const code = mail.body.match(/\b\d{6}\b/)[0];
+  assert.ok(!mail.body.includes('https://'));
   const stored = db.calls.find(c => c.sql.includes('INSERT INTO password_reset_tokens'));
   assert.equal(stored.params[0], crypto.createHmac('sha256', process.env.SESSION_SECRET).update(`password-reset:${signup.email}:${code}`).digest('hex'));
   assert.ok(stored.sql.includes("INTERVAL '30 minutes'"));
@@ -223,13 +223,13 @@ test('successful verification resend and recovery have identical known/unknown a
   assert.equal(sent, 2);
 });
 
-test('SMTP failure responses do not contain provider details, credentials or raw tokens', async t => {
+test('Apps Script failure responses do not contain provider details, credentials or raw tokens', async t => {
   let mail;
   const db = database(sql => sql.startsWith('SELECT id, name, email') || sql.includes('INSERT INTO users')
     ? rows({ id: 1, ...signup }) : empty());
   const request = await serve(t, [['/api', api(db, async value => {
     mail = value;
-    throw Object.assign(new Error('private-provider-detail-test-sentinel'), { code: 'EAUTH' });
+    throw Object.assign(new Error('private-provider-detail-test-sentinel'), { code: 'MOCK_MAIL_FAILURE' });
   })]]);
   for (const [endpoint, body] of [
     ['/api/auth/register', signup],
@@ -240,11 +240,11 @@ test('SMTP failure responses do not contain provider details, credentials or raw
     assert.match(result.body.error, /could not.*sen[dt]/i);
     const response = JSON.stringify(result.body);
     assert.ok(!response.includes('private-provider-detail-test-sentinel'));
-    assert.ok(!response.includes('EAUTH'));
-    const code = mail.text.match(/code is: (\d{6})/)?.[1];
-    const token = mail.text.match(/token=([a-f0-9]{64})/)?.[1];
-    if (code) assert.ok(!response.includes(code));
-    if (token) assert.ok(!response.includes(token));
+    assert.ok(!response.includes('MOCK_MAIL_FAILURE'));
+    assert.ok(!response.includes(testMailSecret));
+    const code = mail.body.match(/\b\d{6}\b/)?.[0];
+    assert.ok(code);
+    assert.ok(!response.includes(code));
   }
 });
 

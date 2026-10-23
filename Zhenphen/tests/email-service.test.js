@@ -1,60 +1,96 @@
-const { test } = require('node:test');
+const { test, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const { load } = require('./helpers.cjs');
+const path = require('node:path');
+const { mailEnvironment, emailService, mailFetch, testMailSecret } = require('./email-helpers.cjs');
 
-function service(sendMail = async () => {}) {
-  let options;
-  const loaded = load('services/emailService.js', {
-    nodemailer: { createTransport: value => { options = value; return { sendMail }; } },
-    '../config/runtime': { appBaseUrl: () => 'https://site.example.com' }
-  });
-  return { mail: loaded.createEmailService(), options: () => options };
-}
+beforeEach(t => mailEnvironment(t));
+const account = { name: '<Test & User>', email: 'recipient@example.com' };
 
-test('email service configures authenticated TLS SMTP and branded sender without exposing credentials', t => {
-  const original = { ...process.env };
-  t.after(() => { process.env = original; });
-  Object.assign(process.env, {
-    NODE_ENV: 'production', EMAIL_SMTP_HOST: 'smtp.example.com', EMAIL_SMTP_PORT: '465',
-    EMAIL_SMTP_USER: 'test-only-user', EMAIL_SMTP_PASSWORD: 'test-only-placeholder', EMAIL_FROM: 'sender@example.com'
-  });
-  const { mail, options } = service();
+test('Apps Script configuration keeps the branded sender and public origin without exposing secrets', t => {
+  mailEnvironment(t, { NODE_ENV: 'production' });
+  const mail = emailService(mailFetch());
   const config = mail.configure();
-  assert.equal(options().secure, true);
-  assert.equal(options().requireTLS, true);
-  assert.equal(options().port, 465);
-  assert.deepEqual(config.from, { name: 'Zhenphen', address: 'sender@example.com' });
+  assert.deepEqual(config.from, { name: 'Zhenphen' });
   assert.equal(config.baseUrl, 'https://site.example.com');
-  assert.equal(config.password, undefined);
-  delete process.env.EMAIL_SMTP_PASSWORD;
-  assert.throws(() => mail.configure(), error => error.status === 503 && !error.message.includes('test-only-user'));
+  assert.equal(typeof config.mailer.sendMail, 'function');
+  assert.ok(!JSON.stringify(config).includes(testMailSecret));
 });
 
-test('verification mail keeps code, expiry, escaped name and existing inline logo', async () => {
-  let message;
-  const { mail } = service();
-  await mail.sendVerification({ name: '<Test & User>', email: 'recipient@example.com' }, '012345', {
-    from: { name: 'Zhenphen', address: 'sender@example.com' }, mailer: { sendMail: async value => { message = value; } }
-  });
-  assert.equal(message.to, 'recipient@example.com');
-  assert.match(message.text, /012345/);
-  assert.match(message.text, /10 minutes/);
-  assert.match(message.html, /&lt;Test &amp; User&gt;/);
-  assert.match(message.html, /cid:zhenphen-logo/);
-  assert.ok(fs.existsSync(message.attachments[0].path));
+test('Apps Script configuration rejects invalid endpoints, missing or short secrets and unsafe production origins', async t => {
+  const cases = [
+    { MAIL_WEB_APP_URL: undefined },
+    { MAIL_WEB_APP_URL: 'not-a-url' },
+    { MAIL_WEB_APP_URL: 'http://script.google.com/macros/s/TEST/exec' },
+    { MAIL_WEB_APP_URL: 'https://attacker.example/macros/s/TEST/exec' },
+    { MAIL_WEB_APP_URL: 'https://script.google.com.attacker.example/macros/s/TEST/exec' },
+    { MAIL_WEB_APP_URL: 'https://script.google.com/macros/s/TEST/dev' },
+    { MAIL_SECRET: undefined }, { MAIL_SECRET: '' }, { MAIL_SECRET: 'short' },
+    { baseUrl: 'not-a-url' }, { baseUrl: 'ftp://site.example.com' },
+    { baseUrl: 'http://site.example.com', NODE_ENV: 'production' },
+    { baseUrl: 'https://user:password@site.example.com' }
+  ];
+  for (const [index, { baseUrl, ...environment }] of cases.entries()) {
+    await t.test(`invalid configuration ${index + 1}`, child => {
+      mailEnvironment(child, { NODE_ENV: 'production', ...environment });
+      const mail = emailService(() => { throw new Error('Configuration checks must not make requests'); }, baseUrl);
+      assert.throws(() => mail.configure(), error => error.status === 503 &&
+        error.message === 'Account email service is not configured.' && !error.message.includes(testMailSecret));
+    });
+  }
 });
 
-test('reset email includes verification code and delivery failure reaches controller for cleanup', async () => {
+test('verification sends the Apps Script JSON contract with code, escaped HTML and original base64 inline logo', async () => {
   let message;
-  const { mail } = service();
-  const account = { name: '<Test>', email: 'recipient@example.com' };
-  const config = { from: 'sender@example.com', mailer: { sendMail: async value => { message = value; } } };
-  await mail.sendPasswordReset(account, '012345', config);
+  const mail = emailService(mailFetch(payload => { message = payload; }));
+  const result = await mail.sendVerification(account, '012345', mail.configure());
+  assert.deepEqual(result, { ok: true });
+  assert.equal(message.secret, testMailSecret);
   assert.equal(message.to, account.email);
-  assert.match(message.text, /012345/);
-  assert.match(message.text, /30 minutes/);
-  assert.match(message.html, /&lt;Test&gt;/);
-  config.mailer.sendMail = async () => { throw new Error('Test mail transport failure'); };
-  await assert.rejects(mail.sendPasswordReset(account, 'https://site.example.com', config), /transport failure/);
+  assert.equal(message.subject, 'Your Zhenphen verification code');
+  assert.match(message.body, /012345/);
+  assert.match(message.body, /10 minutes/);
+  assert.match(message.htmlBody, /&lt;Test &amp; User&gt;/);
+  assert.match(message.htmlBody, /cid:zhenphen-logo/);
+  assert.equal(message.attachments.length, 1);
+  assert.deepEqual(message.attachments[0], {
+    filename: 'zhenphen-logo.png', contentType: 'image/png', cid: 'zhenphen-logo',
+    content: fs.readFileSync(path.resolve(__dirname, '../public/assets/Zhenphen Association logo.png')).toString('base64')
+  });
+  assert.equal(message.attachments[0].path, undefined);
+});
+
+test('password recovery sends its six-digit code and expiry using Apps Script body fields', async () => {
+  let message;
+  const mail = emailService(mailFetch(payload => { message = payload; }));
+  await mail.sendPasswordReset(account, '012345', mail.configure());
+  assert.equal(message.to, account.email);
+  assert.equal(message.subject, 'Reset your Zhenphen password');
+  assert.match(message.body, /012345/);
+  assert.match(message.body, /30 minutes/);
+  assert.match(message.htmlBody, /&lt;Test &amp; User&gt;/);
+  assert.deepEqual(message.attachments, []);
+});
+
+test('Apps Script HTTP failures, rejected delivery and unreadable JSON fail without provider details', async t => {
+  const responses = [
+    { ok: false, json: async () => ({ ok: true, error: 'private-provider-detail' }) },
+    { ok: true, json: async () => ({ ok: false, error: 'private-provider-detail' }) },
+    { ok: true, json: async () => ({ ok: 'true' }) },
+    { ok: true, json: async () => null },
+    { ok: true, json: async () => { throw new Error('private-provider-detail'); } }
+  ];
+  for (const [index, response] of responses.entries()) {
+    await t.test(`delivery failure ${index + 1}`, async () => {
+      const mail = emailService(async () => response);
+      await assert.rejects(mail.sendVerification(account, '012345', mail.configure()), error =>
+        error.message === 'Email service could not send the message.');
+    });
+  }
+});
+
+test('transport rejection propagates so controllers can roll back and remove unsent codes', async () => {
+  const failure = new Error('mock network unavailable');
+  const mail = emailService(async () => { throw failure; });
+  await assert.rejects(mail.sendPasswordReset(account, '012345', mail.configure()), error => error === failure);
 });

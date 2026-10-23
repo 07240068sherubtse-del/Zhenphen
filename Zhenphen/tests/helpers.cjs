@@ -6,14 +6,18 @@ const { apiError } = require('../middleware/api');
 
 // Load actual CommonJS application modules with explicit in-memory dependencies.
 // Never import db.js, read .env, or connect to SMTP/PostgreSQL in these tests.
-function load(relative, mocks) {
+function load(relative, mocks, { fetch: testFetch } = {}) {
   const filename = path.resolve(__dirname, '..', relative);
   const mod = new Module(filename, module);
   mod.filename = filename;
   mod.paths = Module._nodeModulePaths(path.dirname(filename));
   const original = mod.require.bind(mod);
   mod.require = name => Object.hasOwn(mocks, name) ? mocks[name] : original(name);
-  mod._compile(fs.readFileSync(filename, 'utf8'), filename);
+  // Bind fetch only inside the module under test, leaving loopback HTTP tests
+  // and the production service untouched. Never allow mail mocks to use the network.
+  mod.testFetch = testFetch;
+  const bindings = testFetch ? 'const fetch = module.testFetch;\n' : '';
+  mod._compile(bindings + fs.readFileSync(filename, 'utf8'), filename);
   return mod.exports;
 }
 
