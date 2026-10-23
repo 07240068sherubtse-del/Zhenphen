@@ -1,0 +1,17 @@
+{
+  "currency": "BTN",
+  "basis": "Estimate from the ten documents supplied in evidence.docx; not a record of funding received.",
+  "entries": [
+    { "document": 1, "label": "N. P General Store - refreshments", "amountChhetrum": 60000 },
+    { "document": 2, "label": "DBG Enterprise - paint and brushes, including GST", "amountChhetrum": 409500 },
+    { "document": 3, "label": "Jigme Distributor - paints and thinner, including GST", "amountChhetrum": 488250 },
+    { "document": 4, "label": "Jigme Hardware - printed total plus handwritten addition", "amountChhetrum": 375900, "note": "Nu. 3,286.50 plus handwritten Nu. 472.50. The handwritten Nu. 8,641.50 is a subtotal of documents 3 and 4, not another expense." },
+    { "document": 5, "label": "Dendup Enterprise - gold paint, including GST", "amountChhetrum": 729750 },
+    { "document": 6, "label": "N. P General Store - masks", "amountChhetrum": 87500 },
+    { "document": 7, "label": "JC Store - enamel paint, including GST", "amountChhetrum": 130200 },
+    { "document": 8, "label": "Sonam Thinley Tshongkhang - silver paint", "amountChhetrum": 858000 },
+    { "document": 9, "label": "JC Store - credit note (sales return)", "amountChhetrum": -199800 },
+    { "document": 10, "label": "JC Store - gold enamel paint, including GST", "amountChhetrum": 619920 }
+  ],
+  "reconciliationNote": "Includes a handwritten addition and bills dated after the stated completion date. Treat as a provisional cost estimate from the supplied documents pending reconciliation."
+}
