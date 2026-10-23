@@ -68,6 +68,9 @@ test('member evidence keeps bills collapsed and opens documents individually wit
   assert.match(view.section.innerHTML, /More than 100 students/);
   assert.doesNotMatch(receipts, /<img|<iframe|<embed|data-remove-evidence/);
   assert.match(view.node('[data-evidence-photos]').innerHTML, /loading="lazy"/);
+  assert.match(view.node('[data-evidence-photos]').innerHTML, /<button[^>]*data-evidence-photo="\/api\/evidence\/4\/file"/);
+  assert.match(view.node('[data-evidence-photos]').innerHTML, /aria-haspopup="dialog"/);
+  assert.doesNotMatch(view.node('[data-evidence-photos]').innerHTML, /target="_blank"/);
 });
 
 test('admin upload picker switches formats and rejects PDFs as project photos', async () => {

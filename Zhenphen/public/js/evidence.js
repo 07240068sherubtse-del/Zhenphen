@@ -1,4 +1,37 @@
 /* Completed community work: actual attachments are loaded from the server. */
+function openEvidencePhoto(trigger) {
+  let viewer = document.getElementById('evidence-photo-viewer');
+  if (!viewer) {
+    viewer = document.createElement('dialog');
+    viewer.id = 'evidence-photo-viewer';
+    viewer.className = 'evidence-photo-viewer';
+    viewer.setAttribute('aria-labelledby', 'evidence-photo-caption');
+    viewer.innerHTML = `<div class="evidence-photo-viewer-layout"><header class="evidence-photo-viewer-header"><button type="button" class="evidence-photo-back" data-evidence-viewer-close><span aria-hidden="true">&larr;</span> Back to Evidence</button><p id="evidence-photo-caption"></p></header><div class="evidence-photo-stage"><img data-evidence-viewer-image alt=""><p class="evidence-photo-error" role="alert" hidden>This photo could not be loaded. Return to Evidence and try again.</p></div></div>`;
+    document.body.append(viewer);
+    viewer.querySelector('[data-evidence-viewer-close]').addEventListener('click', () => viewer.close());
+    // Native dialog cancellation handles Escape; both close paths restore the gallery.
+    viewer.addEventListener('close', () => {
+      document.body.classList.remove('evidence-viewer-open');
+      viewer.returnFocusTarget?.focus({ preventScroll: true });
+    });
+    const image = viewer.querySelector('[data-evidence-viewer-image]');
+    image.addEventListener('error', () => {
+      image.hidden = true;
+      viewer.querySelector('.evidence-photo-error').hidden = false;
+    });
+  }
+  const image = viewer.querySelector('[data-evidence-viewer-image]');
+  const caption = trigger.querySelector('img').alt;
+  viewer.returnFocusTarget = trigger;
+  viewer.querySelector('#evidence-photo-caption').textContent = caption;
+  image.hidden = false;
+  viewer.querySelector('.evidence-photo-error').hidden = true;
+  image.alt = caption;
+  image.src = trigger.dataset.evidencePhoto;
+  document.body.classList.add('evidence-viewer-open');
+  if (!viewer.open) viewer.showModal();
+}
+
 async function mountProjectEvidence() {
   if (!['student-dashboard', 'supporter-dashboard', 'admin-dashboard', 'ssu-admin-dashboard', 'money'].includes(page)) return;
   const main = document.querySelector('.dash-content');
@@ -35,7 +68,7 @@ async function mountProjectEvidence() {
       section.querySelector('[data-receipt-count]').textContent = `(${receipts.length})`;
       const remove = file => canUpload ? `<button type="button" class="btn outline small" data-remove-evidence="${esc(file.id)}" aria-label="Remove ${esc(file.filename)}">Remove</button>` : '';
       const link = file => `/api/evidence/${encodeURIComponent(file.id)}/file`;
-      section.querySelector('[data-evidence-photos]').innerHTML = photos.length ? photos.map(file => `<figure><a href="${link(file)}" target="_blank" rel="noopener"><img loading="lazy" src="${link(file)}" alt="${esc(file.caption || file.filename)}"></a><figcaption>${esc(file.caption || file.filename)}</figcaption>${remove(file)}</figure>`).join('') : '<p class="form-note">No project photos uploaded yet.</p>';
+      section.querySelector('[data-evidence-photos]').innerHTML = photos.length ? photos.map(file => `<figure><button type="button" class="evidence-photo-trigger" data-evidence-photo="${link(file)}" aria-haspopup="dialog" aria-label="View full photo: ${esc(file.caption || file.filename)}"><img loading="lazy" src="${link(file)}" alt="${esc(file.caption || file.filename)}"></button><figcaption>${esc(file.caption || file.filename)}</figcaption>${remove(file)}</figure>`).join('') : '<p class="form-note">No project photos uploaded yet.</p>';
       section.querySelector('[data-evidence-receipts]').innerHTML = receipts.length ? `<li><div><strong>Activity bills &amp; receipts</strong><p class="form-note">${receipts.length} original documents in one PDF, including any credit notes.</p></div><div class="actions"><a class="btn outline small" href="/api/evidence/receipts.pdf" target="_blank" rel="noopener">Open bills PDF</a><a class="btn outline small" href="/api/evidence/receipts.pdf?download=1">Download PDF</a></div></li>${canUpload ? `<li><details><summary>Manage individual receipt files</summary>${receipts.map(file => `<p>${esc(file.caption || file.filename)} ${remove(file)}</p>`).join('')}</details></li>` : ''}` : '<li class="form-note">No bills or receipts uploaded yet.</li>';
     };
     const refresh = async () => display((await apiRequest('/api/evidence')).files);
@@ -78,6 +111,12 @@ async function mountProjectEvidence() {
       finally { submit.disabled = false; }
     });
     section.addEventListener('click', async event => {
+      const photo = event.target.closest('[data-evidence-photo]');
+      if (photo) {
+        event.preventDefault();
+        openEvidencePhoto(photo);
+        return;
+      }
       const button = event.target.closest('[data-remove-evidence]');
       if (!button || button.disabled) return;
       if (!window.confirm('Remove this evidence file?')) return;
